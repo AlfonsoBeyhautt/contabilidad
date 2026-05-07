@@ -97,7 +97,7 @@ export async function loadInitialAppDataWithMeta(): Promise<AppDataLoadResult> {
 
   if (!isSupabaseConfigured()) {
     const source = fromLs ? "local_fallback" : "empty_fallback";
-    console.info("[data-load] Loaded from localStorage fallback", {
+    console.info("Cargando desde localStorage fallback", {
       reason: "supabase_not_configured",
       ...summarizeCounts(offlineFallback),
     });
@@ -110,7 +110,7 @@ export async function loadInitialAppDataWithMeta(): Promise<AppDataLoadResult> {
   const supabase = getSupabaseBrowserClient();
   if (!supabase) {
     const source = fromLs ? "local_fallback" : "empty_fallback";
-    console.info("[data-load] Loaded from localStorage fallback", {
+    console.info("Cargando desde localStorage fallback", {
       reason: "supabase_client_unavailable",
       ...summarizeCounts(offlineFallback),
     });
@@ -125,7 +125,7 @@ export async function loadInitialAppDataWithMeta(): Promise<AppDataLoadResult> {
       await supabase.auth.getSession();
     if (sessionError || !sessionData.session) {
       const source = fromLs ? "local_fallback" : "empty_fallback";
-      console.info("[data-load] Loaded from localStorage fallback", {
+      console.info("Cargando desde localStorage fallback", {
         reason: sessionError ? "session_error" : "no_valid_session",
         sessionError: sessionError?.message,
         ...summarizeCounts(offlineFallback),
@@ -137,19 +137,24 @@ export async function loadInitialAppDataWithMeta(): Promise<AppDataLoadResult> {
       };
     }
 
+    console.info("Cargando desde Supabase");
     const remote = await fetchFullAppDataFromSupabase(supabase);
     const sanitized = sanitizeOrphanAppDataRelations(remote);
     writeAppDataToLocalStorage(sanitized);
-    console.info("[data-load] Loaded from Supabase", {
-      empty: isRemoteDatasetEmpty(sanitized),
+    console.info(`Supabase cargó ${sanitized.products.length} productos`);
+    console.info(`Supabase cargó ${sanitized.expenses.length} gastos`);
+    console.info("[data-load] resumen", {
+      emptyRemote: isRemoteDatasetEmpty(sanitized),
       ...summarizeCounts(sanitized),
     });
     return { data: sanitized, source: "supabase" };
   } catch (error) {
     const source = fromLs ? "local_fallback" : "empty_fallback";
-    console.error("[data-load] Remote fetch failed, using localStorage fallback", {
+    console.error("Error en fetchFullAppDataFromSupabase", {
       reason: "remote_fetch_error",
       error: error instanceof Error ? error.message : String(error),
+    });
+    console.info("Cargando desde localStorage fallback", {
       ...summarizeCounts(offlineFallback),
     });
     return {

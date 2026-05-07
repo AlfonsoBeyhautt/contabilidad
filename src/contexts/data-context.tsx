@@ -188,6 +188,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!persistReady) return;
+    if (dataSource === "supabase") return;
+    if (!isSupabaseClientReady()) return;
+    let cancelled = false;
+    const retry = async () => {
+      const result = await loadInitialAppDataWithMeta();
+      if (cancelled) return;
+      if (result.source === "supabase") {
+        setData(result.data);
+        setDataSource("supabase");
+      }
+    };
+    const id = window.setInterval(() => {
+      void retry();
+    }, 5000);
+    void retry();
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [persistReady, dataSource]);
+
+  useEffect(() => {
+    if (!persistReady) return;
     if (!isSupabaseClientReady()) {
       writeAppDataToLocalStorage(dataRef.current);
       return;
