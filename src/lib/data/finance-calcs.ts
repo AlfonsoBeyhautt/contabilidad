@@ -1,0 +1,477 @@
+import {
+  addDays,
+  addMonths,
+  addWeeks,
+  addYears,
+  differenceInCalendarDays,
+  endOfDay,
+  endOfMonth,
+  endOfYear,
+  format,
+  isAfter,
+  isBefore,
+  isSameDay,
+  min as minDate,
+  parseISO,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+  startOfYear,
+  subDays,
+  subMonths,
+  subWeeks,
+  subYears,
+} from "date-fns";
+import type {
+  AppData,
+  Customer,
+  DefectiveEntry,
+  Expense,
+  ExpenseCategory,
+  ExpenseRecurrence,
+  PaymentMethod,
+  Product,
+  ProductCategory,
+  Sale,
+} from "./types";
+
+export interface DateRange {
+  start: Date;
+  end: Date;
+}
+
+export function parseISODate(s: string): Date {
+  return new Date(s);
+}
+
+export function inRange(d: Date, r: DateRange): boolean {
+  return !isBefore(d, r.start) && !isAfter(d, r.end);
+}
+
+export function saleLineRevenue(line: {
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+}): number {
+  return Math.max(0, line.quantity * line.unitPrice - line.discount);
+}
+
+export function saleTotal(sale: Sale): number {
+  return sale.lines.reduce((acc, l) => acc + saleLineRevenue(l), 0);
+}
+
+export function saleCogs(sale: Sale): number {
+  let cogs = 0;
+  for (const line of sale.lines) {
+    const unit = sale.costSnapshot[line.productId] ?? 0;
+    cogs += unit * line.quantity;
+  }
+  return cogs;
+}
+
+export function saleGrossProfit(sale: Sale): number {
+  return saleTotal(sale) - saleCogs(sale);
+}
+
+export function filterSalesInRange(sales: Sale[], range: DateRange): Sale[] {
+  return sales.filter((s) => {
+    const d = parseISODate(s.date);
+    return inRange(d, range);
+  });
+}
+
+export function filterExpensesInRange(
+  expenses: Expense[],
+  range: DateRange,
+): Expense[] {
+  return expenses.filter((e) => inRange(parseISODate(e.date), range));
+}
+
+export function filterPurchasesInRange(
+  purchases: import("./types").InventoryPurchase[],
+  range: DateRange,
+) {
+  return purchases.filter((p) => inRange(parseISODate(p.date), range));
+}
+
+export function filterDefectivesInRange(
+  entries: DefectiveEntry[],
+  range: DateRange,
+): DefectiveEntry[] {
+  return entries.filter((x) => inRange(parseISODate(x.recordedAt), range));
+}
+
+export function periodMetrics(data: AppData, range: DateRange) {
+  const sales = filterSalesInRange(data.sales, range);
+  const expenses = filterExpensesInRange(data.expenses, range);
+  const purchases = filterPurchasesInRange(data.purchases, range);
+  const defectives = filterDefectivesInRange(data.defectives ?? [], range);
+
+  const revenue = sales.reduce((a, s) => a + saleTotal(s), 0);
+  const cogsFromSales = sales.reduce((a, s) => a + saleCogs(s), 0);
+  const cogsFromPurchases = purchases.reduce(
+    (a, p) => a + p.quantity * p.unitCost,
+    0,
+  );
+  const expenseTotal = expenses.reduce((a, e) => a + e.amount, 0);
+  const defectiveLoss = defectives.reduce(
+    (a, d) => a + d.quantity * d.unitCost,
+    0,
+  );
+  const grossProfit = revenue - cogsFromSales;
+  const netProfit = grossProfit - expenseTotal - defectiveLoss;
+  const marginPct = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+  const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
+
+  return {
+    revenue,
+    /** Costo directo reconocido por ventas en el período */
+    cogsSales: cogsFromSales,
+    /** Compras de mercadería registradas en el período (distinto de COGS) */
+    inventoryPurchasesValue: cogsFromPurchases,
+    expenses: expenseTotal,
+    /** Costo de unidades defectuosas en el período (no vendibles). */
+    defectiveLoss,
+    grossProfit,
+    netProfit,
+    marginPct,
+    grossMarginPct,
+    saleCount: sales.length,
+    unitsSold: sales.reduce(
+      (a, s) => a + s.lines.reduce((b, l) => b + l.quantity, 0),
+      0,
+    ),
+  };
+}
+
+export function previousPeriodRange(range: DateRange): DateRange {
+  const len =
+    differenceInCalendarDays(endOfDay(range.end), startOfDay(range.start)) + 1;
+  const end = minDate([endOfDay(subYears(range.end, 1)), range.end]);
+  const start = startOfDay(new Date(end.getTime() - (len - 1) * 86400000));
+  return { start, end };
+}
+
+export function monthPreviousRange(range: DateRange): DateRange {
+  const ref = range.start;
+  const prev = subMonths(ref, 1);
+  return {
+    start: startOfMonth(prev),
+    end: endOfMonth(prev),
+  };
+}
+
+export function compareToPreviousYear(range: DateRange): DateRange {
+  return {
+    start: subYears(range.start, 1),
+    end: subYears(range.end, 1),
+  };
+}
+
+export type PeriodPreset =
+  | "hoy"
+  | "esta_semana"
+  | "este_mes"
+  | "este_año"
+  | "año_anterior"
+  | "personalizado";
+
+export function rangeFromPreset(
+  preset: PeriodPreset,
+  custom?: { start: Date; end: Date },
+  now = new Date(),
+): DateRange {
+  switch (preset) {
+    case "hoy":
+      return { start: startOfDay(now), end: endOfDay(now) };
+    case "esta_semana":
+      return {
+        start: startOfWeek(now, { weekStartsOn: 1 }),
+        end: endOfDay(now),
+      };
+    case "este_mes":
+      return { start: startOfMonth(now), end: endOfDay(now) };
+    case "este_año":
+      return { start: startOfYear(now), end: endOfDay(now) };
+    case "año_anterior": {
+      const y = subYears(now, 1);
+      return { start: startOfYear(y), end: endOfYear(y) };
+    }
+    case "personalizado":
+      if (!custom) {
+        return { start: startOfMonth(now), end: endOfDay(now) };
+      }
+      return {
+        start: startOfDay(custom.start),
+        end: endOfDay(custom.end),
+      };
+    default:
+      return { start: startOfMonth(now), end: endOfDay(now) };
+  }
+}
+
+export function productByIdMap(products: Product[]): Map<string, Product> {
+  return new Map(products.map((p) => [p.id, p]));
+}
+
+export function topProductsByRevenue(
+  sales: Sale[],
+  products: Product[],
+  limit = 8,
+) {
+  const pmap = productByIdMap(products);
+  const rev = new Map<string, number>();
+  const qty = new Map<string, number>();
+  for (const s of sales) {
+    for (const l of s.lines) {
+      const r = saleLineRevenue(l);
+      rev.set(l.productId, (rev.get(l.productId) ?? 0) + r);
+      qty.set(l.productId, (qty.get(l.productId) ?? 0) + l.quantity);
+    }
+  }
+  return [...rev.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([productId, revenue]) => ({
+      productId,
+      name: pmap.get(productId)?.name ?? productId,
+      category: pmap.get(productId)?.category ?? "Remeras",
+      revenue,
+      quantity: qty.get(productId) ?? 0,
+    }));
+}
+
+export function stockStatus(p: Product): "disponible" | "bajo" | "agotado" {
+  if (p.stock <= 0) return "agotado";
+  if (p.stock <= p.minStock) return "bajo";
+  return "disponible";
+}
+
+export function customerMetrics(
+  customer: Customer,
+  sales: Sale[],
+  products: Product[],
+  now = new Date(),
+) {
+  const custSales = sales.filter((s) => s.customerId === customer.id);
+  const sorted = [...custSales].sort(
+    (a, b) => parseISODate(a.date).getTime() - parseISODate(b.date).getTime(),
+  );
+  const totalSpent = custSales.reduce((a, s) => a + saleTotal(s), 0);
+  const purchaseCount = custSales.length;
+  const lastPurchase =
+    sorted.length > 0 ? sorted[sorted.length - 1].date : undefined;
+  const daysSinceLast =
+    lastPurchase != null
+      ? differenceInCalendarDays(now, parseISODate(lastPurchase))
+      : undefined;
+
+  const pmap = productByIdMap(products);
+  const productIds = new Set<string>();
+  for (const s of custSales) {
+    for (const l of s.lines) productIds.add(l.productId);
+  }
+  const productsBought = [...productIds].map((id) => pmap.get(id)?.name ?? id);
+
+  let segment: "nuevo" | "frecuente" | "inactivo" | "normal" = "normal";
+  if (purchaseCount === 0) segment = "nuevo";
+  else if (daysSinceLast != null && daysSinceLast > 90) segment = "inactivo";
+  else if (purchaseCount >= 3 || totalSpent > 150000) segment = "frecuente";
+  else if (sorted.length === 1) {
+    const first = parseISODate(sorted[0].date);
+    if (differenceInCalendarDays(now, first) <= 30) segment = "nuevo";
+  }
+
+  return {
+    totalSpent,
+    purchaseCount,
+    lastPurchase,
+    productsBought,
+    segment,
+    daysSinceLast,
+  };
+}
+
+export function expensesByCategory(expenses: Expense[]): Record<
+  ExpenseCategory,
+  number
+> {
+  const init = {} as Record<ExpenseCategory, number>;
+  const cats: ExpenseCategory[] = [
+    "producción",
+    "marketing",
+    "envíos",
+    "otros",
+  ];
+  for (const c of cats) init[c] = 0;
+  for (const e of expenses) {
+    init[e.category] = (init[e.category] ?? 0) + e.amount;
+  }
+  return init;
+}
+
+function bumpRecurrenceSchedule(
+  from: Date,
+  freq: ExpenseRecurrence["frequency"],
+): Date {
+  switch (freq) {
+    case "semanal":
+      return addWeeks(from, 1);
+    case "quincenal":
+      return addDays(from, 14);
+    case "mensual":
+      return addMonths(from, 1);
+    case "trimestral":
+      return addMonths(from, 3);
+    case "anual":
+      return addYears(from, 1);
+    default:
+      return addMonths(from, 1);
+  }
+}
+
+function unbumpRecurrenceSchedule(
+  from: Date,
+  freq: ExpenseRecurrence["frequency"],
+): Date {
+  switch (freq) {
+    case "semanal":
+      return subWeeks(from, 1);
+    case "quincenal":
+      return subDays(from, 14);
+    case "mensual":
+      return subMonths(from, 1);
+    case "trimestral":
+      return subMonths(from, 3);
+    case "anual":
+      return subYears(from, 1);
+    default:
+      return subMonths(from, 1);
+  }
+}
+
+/**
+ * Cuotas de recurrencias en el período que aún no tienen gasto emitido (mismo día +
+ * `fromRecurrenceId`). Usa `nextRunAt` como ancla del calendario (alineado al tick).
+ */
+export function missingRecurrenceAccrualByCategory(
+  data: AppData,
+  range: DateRange,
+): Record<ExpenseCategory, number> {
+  const cats: ExpenseCategory[] = [
+    "producción",
+    "marketing",
+    "envíos",
+    "otros",
+  ];
+  const init = {} as Record<ExpenseCategory, number>;
+  for (const c of cats) init[c] = 0;
+
+  const expenses = data.expenses ?? [];
+  const recurrences = data.expenseRecurrences ?? [];
+  const rangeStart = startOfDay(range.start);
+  const rangeEnd = endOfDay(range.end);
+
+  for (const r of recurrences) {
+    if (r.paused) continue;
+    const recEnd = r.endDate
+      ? endOfDay(parseISO(`${r.endDate}T12:00:00`))
+      : null;
+
+    const dayKeys = new Set<string>();
+    let x = startOfDay(parseISO(`${r.nextRunAt}T12:00:00`));
+    let guard = 0;
+    while (guard < 240 && !isBefore(x, rangeStart)) {
+      guard++;
+      if (recEnd && isAfter(x, recEnd)) {
+        x = unbumpRecurrenceSchedule(x, r.frequency);
+        continue;
+      }
+      if (!isBefore(x, rangeStart) && !isAfter(x, rangeEnd)) {
+        dayKeys.add(format(x, "yyyy-MM-dd"));
+      }
+      x = unbumpRecurrenceSchedule(x, r.frequency);
+    }
+
+    x = startOfDay(parseISO(`${r.nextRunAt}T12:00:00`));
+    x = bumpRecurrenceSchedule(x, r.frequency);
+    guard = 0;
+    while (guard < 240 && !isAfter(x, rangeEnd)) {
+      guard++;
+      if (recEnd && isAfter(x, recEnd)) break;
+      if (!isBefore(x, rangeStart) && !isAfter(x, rangeEnd)) {
+        dayKeys.add(format(x, "yyyy-MM-dd"));
+      }
+      x = bumpRecurrenceSchedule(x, r.frequency);
+    }
+
+    for (const key of dayKeys) {
+      const d = startOfDay(parseISO(`${key}T12:00:00`));
+      if (recEnd && isAfter(d, recEnd)) continue;
+      const dup = expenses.some(
+        (e) =>
+          e.fromRecurrenceId === r.id && isSameDay(parseISO(e.date), d),
+      );
+      if (!dup) {
+        init[r.category] = (init[r.category] ?? 0) + r.amount;
+      }
+    }
+  }
+  return init;
+}
+
+export function salesAggregatedByMonth(
+  sales: Sale[],
+  year: number,
+): { month: number; revenue: number; cogs: number; gross: number }[] {
+  const buckets = Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1,
+    revenue: 0,
+    cogs: 0,
+    gross: 0,
+  }));
+  for (const s of sales) {
+    const d = parseISODate(s.date);
+    if (d.getFullYear() !== year) continue;
+    const m = d.getMonth();
+    const rev = saleTotal(s);
+    const cg = saleCogs(s);
+    buckets[m].revenue += rev;
+    buckets[m].cogs += cg;
+    buckets[m].gross += rev - cg;
+  }
+  return buckets;
+}
+
+export function filterSales(
+  sales: Sale[],
+  opts: {
+    range?: DateRange;
+    productId?: string;
+    category?: ProductCategory;
+    payment?: PaymentMethod;
+    customerId?: string;
+  },
+  products: Product[],
+): Sale[] {
+  let out = sales;
+  const pmap = productByIdMap(products);
+  if (opts.range) {
+    out = filterSalesInRange(out, opts.range);
+  }
+  if (opts.productId) {
+    out = out.filter((s) => s.lines.some((l) => l.productId === opts.productId));
+  }
+  if (opts.category) {
+    out = out.filter((s) =>
+      s.lines.some((l) => pmap.get(l.productId)?.category === opts.category),
+    );
+  }
+  if (opts.payment) {
+    out = out.filter((s) => s.paymentMethod === opts.payment);
+  }
+  if (opts.customerId) {
+    out = out.filter((s) => s.customerId === opts.customerId);
+  }
+  return out;
+}

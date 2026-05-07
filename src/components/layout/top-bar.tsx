@@ -1,0 +1,58 @@
+"use client";
+
+import { LogOut, Moon, Sun } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { useTheme } from "@/contexts/theme-context";
+import { PeriodFilter } from "@/components/period/period-filter";
+
+const titles: Record<string, string> = {
+  "/": "Inicio",
+  "/ventas": "Ventas",
+  "/productos": "Productos",
+  "/stock": "Stock",
+  "/gastos": "Gastos",
+  "/costos": "Costos",
+  "/clientes": "Clientes",
+  "/reportes": "Reportes",
+  "/configuracion": "Configuración",
+};
+
+export function TopBar() {
+  const pathname = usePathname();
+  const { logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const title = titles[pathname] ?? "Panel";
+
+  return (
+    <header className="flex min-h-14 flex-col gap-3 border-b border-zinc-200 bg-zinc-100/90 px-4 py-3 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900/95">
+      <h1 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+        {title}
+      </h1>
+      <div className="flex flex-wrap items-center gap-4">
+        <PeriodFilter />
+        <button
+          type="button"
+          onClick={() => toggleTheme()}
+          className="inline-flex items-center justify-center rounded-lg border border-zinc-200 p-2 text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+          title={theme === "dark" ? "Modo claro" : "Modo oscuro"}
+          aria-label={theme === "dark" ? "Activar modo claro" : "Activar modo oscuro"}
+        >
+          {theme === "dark" ? (
+            <Sun className="h-4 w-4" aria-hidden />
+          ) : (
+            <Moon className="h-4 w-4" aria-hidden />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+        >
+          <LogOut className="h-3.5 w-3.5" aria-hidden />
+          Salir
+        </button>
+      </div>
+    </header>
+  );
+}
