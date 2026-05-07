@@ -261,22 +261,14 @@ function mapRecurrenceRow(r: RecurrenceRow): ExpenseRecurrence {
 export async function fetchFullAppDataFromSupabase(
   supabase: SupabaseClient,
 ): Promise<AppData> {
-  const [
-    { data: famRows, error: eFam },
-    { data: prodRows, error: eProd },
-    { data: custRows, error: eCust },
-    { data: expenseRows, error: eExp },
-    { data: settRow, error: eSet },
-    { data: salesRows, error: eSales },
-    { data: pchRows, error: ePch },
-    { data: pitemRows, error: ePi },
-    { data: defRows, error: eDef },
-    { data: recRows, error: eRec },
-  ] = await Promise.all([
+  const results = await Promise.allSettled([
     supabase.from("product_families").select("*").order("name"),
     supabase.from("products").select("*").order("stock", { ascending: true }),
     supabase.from("customers").select("*").order("name"),
-    supabase.from("expenses").select("*").order("expense_date", { ascending: false }),
+    supabase
+      .from("expenses")
+      .select("*")
+      .order("expense_date", { ascending: false }),
     supabase.from("settings").select("*").eq("id", 1).maybeSingle(),
     supabase.from("sales").select(`
         id,
@@ -301,31 +293,54 @@ export async function fetchFullAppDataFromSupabase(
     supabase.from("expense_recurrences").select("*").order("next_run_at"),
   ]);
 
-  const firstErr =
-    eFam ??
-    eProd ??
-    eCust ??
-    eExp ??
-    eSet ??
-    eSales ??
-    ePch ??
-    ePi ??
-    eDef ??
-    eRec;
-  if (firstErr) throw firstErr;
+  function pickData<T>(
+    index: number,
+    label: string,
+    fallback: T,
+    required = false,
+  ): T {
+    const settled = results[index];
+    if (settled.status === "rejected") {
+      const reason =
+        settled.reason instanceof Error
+          ? settled.reason.message
+          : String(settled.reason);
+      if (required) {
+        throw new Error(`Supabase query failed (${label}): ${reason}`);
+      }
+      console.error(`[supabase-load] ${label} failed`, reason);
+      return fallback;
+    }
+    if (settled.value.error) {
+      const reason = settled.value.error.message;
+      if (required) {
+        throw new Error(`Supabase query failed (${label}): ${reason}`);
+      }
+      console.error(`[supabase-load] ${label} failed`, reason);
+      return fallback;
+    }
+    return (settled.value.data as T) ?? fallback;
+  }
 
-  const productFamilies = ((famRows ?? []) as ProductFamilyRow[]).map(
-    mapFamilyRow,
-  );
+  // Tablas base requeridas para evitar estado "vacío local" cuando Supabase sí existe.
+  const famRows = pickData<ProductFamilyRow[]>(0, "product_families", []);
+  const prodRows = pickData<ProductRow[]>(1, "products", [], true);
+  const custRows = pickData<CustomerRow[]>(2, "customers", []);
+  const expenseRows = pickData<ExpenseRow[]>(3, "expenses", []);
+  const settRow = pickData<SettingsRow | null>(4, "settings", null);
+  const salesRows = pickData<SaleRow[]>(5, "sales", []);
+  const pchRows = pickData<PurchaseRow[]>(6, "purchases", []);
+  const pitemRows = pickData<PurchaseItemRow[]>(7, "purchase_items", []);
+  const defRows = pickData<DefectiveRow[]>(8, "defective_entries", []);
+  const recRows = pickData<RecurrenceRow[]>(9, "expense_recurrences", []);
+
+  const productFamilies = famRows.map(mapFamilyRow);
   const familyById = new Map(productFamilies.map((f) => [f.id, f]));
-  const productRows = (prodRows ?? []) as ProductRow[];
-  const customers = (custRows ?? []) as CustomerRow[];
-  const expenses = (expenseRows ?? []) as ExpenseRow[];
   const purchaseById = new Map(
-    ((pchRows ?? []) as PurchaseRow[]).map((p) => [p.id, p]),
+    pchRows.map((p) => [p.id, p]),
   );
 
-  const purchases: InventoryPurchase[] = ((pitemRows ?? []) as PurchaseItemRow[]).map(
+  const purchases: InventoryPurchase[] = pitemRows.map(
     (it) => {
       const hdr = purchaseById.get(it.purchase_id);
       return {
@@ -340,7 +355,7 @@ export async function fetchFullAppDataFromSupabase(
     },
   );
 
-  const salesMapped: Sale[] = ((salesRows ?? []) as SaleRow[]).map((s) => {
+  const salesMapped: Sale[] = salesRows.map((s) => {
     const items = s.sale_items ?? [];
     const lines: SaleLine[] = items.map((it) => ({
       productId: it.product_id,
@@ -376,18 +391,18 @@ export async function fetchFullAppDataFromSupabase(
         lowStockAlerts: true,
       };
 
-  const products = productRows.map((r) => mapProduct(r, familyById));
+  const products = prodRows.map((r) => mapProduct(r, familyById));
 
-  const defectives = ((defRows ?? []) as DefectiveRow[]).map(mapDefectiveRow);
-  const expenseRecurrences = ((recRows ?? []) as RecurrenceRow[]).map(
+  const defectives = defRows.map(mapDefectiveRow);
+  const expenseRecurrences = recRows.map(
     mapRecurrenceRow,
   );
 
   return migrateAppDataShape({
     productFamilies,
     products,
-    customers: customers.map(mapCustomer),
-    expenses: expenses.map(mapExpense),
+    customers: custRows.map(mapCustomer),
+    expenses: expenseRows.map(mapExpense),
     purchases,
     sales: salesMapped,
     defectives,
