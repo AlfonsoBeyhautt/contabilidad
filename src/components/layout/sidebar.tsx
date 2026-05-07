@@ -8,7 +8,6 @@ import {
   CircleDollarSign,
   LayoutDashboard,
   Package,
-  Receipt,
   Settings,
   Shirt,
   TrendingUp,
@@ -28,11 +27,19 @@ const nav = [
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
-export function Sidebar({ shopName }: { shopName: string }) {
+export function Sidebar({
+  shopName,
+  className = "",
+  onNavigate,
+}: {
+  shopName: string;
+  className?: string;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-60 shrink-0 flex-col border-r border-zinc-200 bg-zinc-100/95 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <aside className={`flex h-full w-60 shrink-0 flex-col border-r border-zinc-200 bg-zinc-100/95 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900 ${className}`}>
       <div className="border-b border-zinc-200 px-4 py-5 dark:border-zinc-800">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900">
@@ -59,6 +66,7 @@ export function Sidebar({ shopName }: { shopName: string }) {
             <Link
               key={href}
               href={href}
+              onClick={onNavigate}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active
                   ? "bg-zinc-900 text-white shadow-sm dark:bg-zinc-100 dark:text-zinc-900"
