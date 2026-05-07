@@ -84,7 +84,54 @@ export function ClientesView() {
           subtitle="Alta manual, edición y asociación a ventas"
         />
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[960px] text-left text-sm">
+          <div className="space-y-3 p-3 md:hidden">
+            {rows.map(
+              ({ c, totalSpent, purchaseCount, lastPurchase, segment: seg }) => (
+                <div key={c.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium">{c.name}</p>
+                    <span className="capitalize text-xs text-zinc-500">{seg}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                    {c.phone || "—"} · {c.email || "—"}
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <p>
+                      <span className="text-zinc-500">Total:</span>{" "}
+                      <span className="font-medium tabular-nums">{formatCurrency(totalSpent)}</span>
+                    </p>
+                    <p>
+                      <span className="text-zinc-500">Compras:</span>{" "}
+                      <span className="font-medium tabular-nums">{purchaseCount}</span>
+                    </p>
+                    <p className="col-span-2">
+                      <span className="text-zinc-500">Última compra:</span>{" "}
+                      <span className="font-medium">{lastPurchase ? formatDate(lastPurchase) : "—"}</span>
+                    </p>
+                  </div>
+                  <div className="mt-3 flex justify-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(c)}
+                      className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                      aria-label="Editar cliente"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(c)}
+                      className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                      aria-label="Eliminar cliente"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+          <table className="hidden w-full min-w-[960px] text-left text-sm md:table">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50">
               <tr>
                 <th className="px-4 py-3">Cliente</th>

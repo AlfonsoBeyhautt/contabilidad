@@ -178,7 +178,126 @@ export function ProductosView() {
       <Card>
         <CardHeader title="Productos y variantes" />
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[880px] text-left text-sm">
+          <div className="space-y-3 p-3 md:hidden">
+            {grouped.length === 0 ? (
+              <p className="rounded-lg border border-zinc-200 px-3 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
+                {filter === "all" ? "No hay productos cargados." : "Nada coincide con este filtro."}
+              </p>
+            ) : (
+              grouped.map(({ family, variants, allVariants }) => (
+                <div key={family.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold">{family.name}</p>
+                      <p className="text-xs text-zinc-500">{family.category} · Ingreso {formatDate(family.entryDate)}</p>
+                    </div>
+                    <p className="text-xs text-zinc-500">{allVariants.length} variante{allVariants.length === 1 ? "" : "s"}</p>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditingFamily(family)}
+                      className="rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      Editar prenda
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAddingVariantFor(family.id)}
+                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-200 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Variante
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          confirm(
+                            "¿Eliminar esta prenda y todas sus variantes?",
+                          )
+                        ) {
+                          deleteProductFamily(family.id);
+                        }
+                      }}
+                      className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {variants.map((p) => {
+                      const st = stockStatus(p);
+                      return (
+                        <div key={p.id} className="rounded-md border border-zinc-200 p-2 dark:border-zinc-700">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-medium">{p.model || "Sin modelo"}</p>
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                              st === "agotado"
+                                ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+                                : st === "bajo"
+                                  ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+                                  : "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
+                            }`}>
+                              {st === "agotado" ? "Agotado" : st === "bajo" ? "Bajo" : "OK"}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{formatStockBySizeSummary(p)}</p>
+                          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                            <p><span className="text-zinc-500">Costo:</span> <span className="font-medium tabular-nums">{formatCurrency(p.purchaseCost)}</span></p>
+                            <p><span className="text-zinc-500">Precio:</span> <span className="font-medium tabular-nums">{formatCurrency(p.salePrice)}</span></p>
+                            <p><span className="text-zinc-500">Stock:</span> <span className="font-medium tabular-nums">{p.stock}</span></p>
+                            <p><span className="text-zinc-500">Mín.:</span> <span className="font-medium tabular-nums">{p.minStock}</span></p>
+                          </div>
+                          <div className="mt-2 flex flex-wrap justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => adjustStock(p.id, 1)}
+                              className="rounded border border-zinc-200 px-2 py-0.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                            >
+                              +1
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => adjustStock(p.id, -1)}
+                              className="rounded border border-zinc-200 px-2 py-0.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                            >
+                              −1
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingVariant(p)}
+                              className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                              aria-label="Editar variante"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    "¿Eliminar esta variante? Las ventas históricas conservan sus datos.",
+                                  )
+                                ) {
+                                  deleteProduct(p.id);
+                                }
+                              }}
+                              className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"
+                              aria-label="Eliminar variante"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <table className="hidden w-full min-w-[880px] text-left text-sm md:table">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50">
               <tr>
                 <th className="w-10 px-2 py-3" />

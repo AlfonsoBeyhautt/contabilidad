@@ -476,7 +476,46 @@ export function VentasView() {
           subtitle={`Período global + filtros · ${filtered.length} registros`}
         />
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[920px] text-left text-sm">
+          <div className="space-y-3 p-3 md:hidden">
+            {filtered.map((s) => {
+              const cust = data.customers.find((c) => c.id === s.customerId);
+              const desc = s.lines.map((l) => saleLineText(data.products, l)).join(", ");
+              return (
+                <div key={s.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs text-zinc-500">{formatDateTime(s.date)}</p>
+                    <span className="capitalize text-xs text-zinc-500">{s.paymentMethod}</span>
+                  </div>
+                  <p className="mt-2 text-sm">{desc}</p>
+                  <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">Cliente: {cust?.name ?? "—"}</p>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                    <p><span className="text-zinc-500">Total:</span> <span className="font-medium tabular-nums">{formatCurrency(saleTotal(s))}</span></p>
+                    <p><span className="text-zinc-500">COGS:</span> <span className="font-medium tabular-nums">{formatCurrency(saleCogs(s))}</span></p>
+                    <p><span className="text-zinc-500">Gan.:</span> <span className="font-medium tabular-nums text-emerald-700 dark:text-emerald-400">{formatCurrency(saleGrossProfit(s))}</span></p>
+                  </div>
+                  <div className="mt-3 flex justify-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditingSale(s)}
+                      className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                      aria-label="Editar venta"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSale(s)}
+                      className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                      aria-label="Eliminar venta"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <table className="hidden w-full min-w-[920px] text-left text-sm md:table">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
               <tr>
                 <th className="px-4 py-3">Fecha</th>

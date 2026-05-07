@@ -244,7 +244,57 @@ export function GastosView() {
           <Card>
             <CardHeader title="Gastos registrados" />
             <CardContent className="overflow-x-auto p-0">
-              <table className="w-full min-w-[800px] text-left text-sm">
+              <div className="space-y-3 p-3 md:hidden">
+                {filtered.map((e) => (
+                  <div key={e.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs text-zinc-500">{formatDate(e.date)}</p>
+                      <span className="capitalize text-xs text-zinc-500">{e.paymentMethod}</span>
+                    </div>
+                    <p className="mt-2 font-medium">
+                      {e.description}
+                      {e.fromRecurrenceId ? (
+                        <span className="ml-1 text-[10px] text-zinc-400">(auto)</span>
+                      ) : null}
+                    </p>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <p><span className="text-zinc-500">Categoría:</span> <span className="font-medium">{expenseCatLabel[e.category] ?? e.category}</span></p>
+                      <p><span className="text-zinc-500">Tipo:</span> <span className="font-medium">{e.kind}</span></p>
+                      <p className="col-span-2"><span className="text-zinc-500">Monto:</span> <span className="font-medium tabular-nums">{formatCurrency(e.amount)}</span></p>
+                    </div>
+                    <div className="mt-3 flex justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingExpense(e);
+                          setOpen(true);
+                        }}
+                        className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                        aria-label="Editar gasto"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            confirm(
+                              "¿Eliminar este gasto? Se actualizarán reportes y totales.",
+                            )
+                          ) {
+                            deleteExpense(e.id);
+                          }
+                        }}
+                        className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                        aria-label="Eliminar gasto"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <table className="hidden w-full min-w-[800px] text-left text-sm md:table">
                 <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
                   <tr>
                     <th className="px-4 py-3">Fecha</th>
@@ -337,7 +387,51 @@ export function GastosView() {
               subtitle="Generan un gasto automático cuando llega la próxima fecha"
             />
             <CardContent className="overflow-x-auto p-0">
-              <table className="w-full min-w-[800px] text-left text-sm">
+              <div className="space-y-3 p-3 md:hidden">
+                {recurrences.map((r) => (
+                  <div key={r.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+                    <p className="font-medium">{r.description}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <p><span className="text-zinc-500">Monto:</span> <span className="font-medium tabular-nums">{formatCurrency(r.amount)}</span></p>
+                      <p><span className="text-zinc-500">Frecuencia:</span> <span className="font-medium">{freqLabel[r.frequency]}</span></p>
+                      <p><span className="text-zinc-500">Próxima:</span> <span className="font-medium tabular-nums">{r.nextRunAt}</span></p>
+                      <p>
+                        <span className="text-zinc-500">Estado:</span>{" "}
+                        <span className={r.paused ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}>
+                          {r.paused ? "Pausado" : "Activo"}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="mt-3 flex justify-end gap-3 text-xs">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateExpenseRecurrence(r.id, { paused: !r.paused })
+                        }
+                        className="text-zinc-600 underline dark:text-zinc-400"
+                      >
+                        {r.paused ? "Reactivar" : "Pausar"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            confirm(
+                              "¿Eliminar esta recurrencia? No borra gastos ya generados.",
+                            )
+                          ) {
+                            deleteExpenseRecurrence(r.id);
+                          }
+                        }}
+                        className="text-red-600 underline"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <table className="hidden w-full min-w-[800px] text-left text-sm md:table">
                 <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
                   <tr>
                     <th className="px-4 py-3">Descripción</th>

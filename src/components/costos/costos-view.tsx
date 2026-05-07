@@ -154,7 +154,58 @@ export function CostosView() {
           subtitle="Historial en el período filtrado"
         />
         <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[880px] text-left text-sm">
+          <div className="space-y-3 p-3 md:hidden">
+            {filteredPurchases.map((p) => {
+              const prod = data.products.find((x) => x.id === p.productId);
+              const total = p.quantity * p.unitCost;
+              return (
+                <div key={p.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium">{prod?.name ?? p.productId}</p>
+                    <p className="text-xs text-zinc-500">{formatDate(p.date)}</p>
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                    Proveedor: {p.supplier || "—"}
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <p><span className="text-zinc-500">Cantidad:</span> <span className="font-medium tabular-nums">{p.quantity}</span></p>
+                    <p><span className="text-zinc-500">Costo unit.:</span> <span className="font-medium tabular-nums">{formatCurrency(p.unitCost)}</span></p>
+                    <p className="col-span-2"><span className="text-zinc-500">Total:</span> <span className="font-medium tabular-nums">{formatCurrency(total)}</span></p>
+                  </div>
+                  <div className="mt-3 flex justify-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPurchase(p);
+                        setOpen(true);
+                      }}
+                      className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                      aria-label="Editar compra"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          confirm(
+                            "¿Eliminar esta compra? Se descontará del stock y se actualizarán totales.",
+                          )
+                        ) {
+                          deletePurchase(p.id);
+                        }
+                      }}
+                      className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                      aria-label="Eliminar compra"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <table className="hidden w-full min-w-[880px] text-left text-sm md:table">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50">
               <tr>
                 <th className="px-4 py-3">Fecha</th>
