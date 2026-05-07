@@ -56,7 +56,8 @@ import {
   mirrorSaleDeleteAsync,
   mirrorSaleReplaceAsync,
   mirrorSettingsAsync,
-  loadInitialAppData,
+  loadInitialAppDataWithMeta,
+  type AppDataLoadSource,
   APP_DATA_PERSIST_ERROR_EVENT,
 } from "@/lib/supabase/mirror-app-data";
 import { isSupabaseClientReady } from "@/lib/supabase/is-supabase-client-ready";
@@ -93,6 +94,7 @@ function newId(): string {
 
 type DataContextValue = {
   data: AppData;
+  dataSource: AppDataLoadSource;
   setData: (d: AppData) => void;
   addSale: (input: Omit<Sale, "id">) => void;
   updateSale: (id: string, input: Omit<Sale, "id">) => void;
@@ -145,10 +147,14 @@ const DataContext = createContext<DataContextValue | null>(null);
  */
 export function DataProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(() => emptyAppData());
+  const [dataSource, setDataSource] = useState<AppDataLoadSource>("empty_fallback");
   const [persistReady, setPersistReady] = useState(false);
   const [persistError, setPersistError] = useState<string | null>(null);
   const dataRef = useRef(data);
-  dataRef.current = data;
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   useEffect(() => {
     const onErr = (ev: Event) => {
@@ -166,9 +172,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const next = await loadInitialAppData();
+      const result = await loadInitialAppDataWithMeta();
       if (!cancelled) {
-        setData(next);
+        setData(result.data);
+        setDataSource(result.source);
       }
       if (!cancelled) {
         setPersistReady(true);
@@ -763,8 +770,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const reloadAppData = useCallback(async () => {
     clearAppDataLocalStorage();
-    const next = await loadInitialAppData();
-    setData(next);
+    const result = await loadInitialAppDataWithMeta();
+    setData(result.data);
+    setDataSource(result.source);
   }, []);
 
   const setDataExternal = useCallback((d: AppData) => {
@@ -774,6 +782,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       data,
+      dataSource,
       setData: setDataExternal,
       addSale,
       updateSale,
@@ -805,6 +814,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }),
     [
       data,
+      dataSource,
       setDataExternal,
       addSale,
       updateSale,

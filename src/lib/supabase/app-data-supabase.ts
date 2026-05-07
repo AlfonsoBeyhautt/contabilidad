@@ -973,3 +973,16 @@ export async function setProductStockInSupabase(
     .eq("id", productId);
   return { error: error ? new Error(error.message) : null };
 }
+
+export function isRemoteDatasetEmpty(data: AppData): boolean {
+  return (
+    data.productFamilies.length === 0 &&
+    data.products.length === 0 &&
+    data.customers.length === 0 &&
+    data.sales.length === 0 &&
+    data.purchases.length === 0 &&
+    data.expenses.length === 0 &&
+    (data.defectives?.length ?? 0) === 0 &&
+    (data.expenseRecurrences?.length ?? 0) === 0
+  );
+}

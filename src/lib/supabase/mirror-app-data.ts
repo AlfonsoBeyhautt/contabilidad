@@ -3,6 +3,7 @@ import { emptyAppData } from "@/lib/data/empty-app-data";
 import {
   readAppDataFromLocalStorage,
   removeLegacyAppDataStorageKey,
+  writeAppDataToLocalStorage,
 } from "@/lib/data/local-storage-app-data";
 import {
   sanitizeOrphanAppDataRelations,
@@ -30,6 +31,7 @@ import {
   deleteProductFromSupabase,
   deleteSaleFromSupabase,
   fetchFullAppDataFromSupabase,
+  isRemoteDatasetEmpty,
   insertCustomerToSupabase,
   insertDefectiveEntryToSupabase,
   insertExpenseRecurrenceToSupabase,
@@ -60,6 +62,32 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
  * solo guarda copias de respaldo periódicas (ver `DataProvider`).
  */
 export async function loadInitialAppData(): Promise<AppData> {
+  const result = await loadInitialAppDataWithMeta();
+  return result.data;
+}
+
+export type AppDataLoadSource =
+  | "supabase"
+  | "local_fallback"
+  | "empty_fallback";
+
+export type AppDataLoadResult = {
+  data: AppData;
+  source: AppDataLoadSource;
+  reason?: string;
+};
+
+function summarizeCounts(data: AppData) {
+  return {
+    products: data.products.length,
+    customers: data.customers.length,
+    sales: data.sales.length,
+    expenses: data.expenses.length,
+    purchases: data.purchases.length,
+  };
+}
+
+export async function loadInitialAppDataWithMeta(): Promise<AppDataLoadResult> {
   removeLegacyAppDataStorageKey();
 
   const fromLs = readAppDataFromLocalStorage();
@@ -67,16 +95,69 @@ export async function loadInitialAppData(): Promise<AppData> {
     fromLs ?? emptyAppData(),
   );
 
-  if (!isSupabaseConfigured()) return offlineFallback;
-  const supabase = getSupabaseBrowserClient();
-  if (!supabase) return offlineFallback;
-  try {
-    const remote = await fetchFullAppDataFromSupabase(supabase);
-    return sanitizeOrphanAppDataRelations(remote);
-  } catch {
-    /* timeout, RLS, tablas sin crear, etc. */
+  if (!isSupabaseConfigured()) {
+    const source = fromLs ? "local_fallback" : "empty_fallback";
+    console.info("[data-load] Loaded from localStorage fallback", {
+      reason: "supabase_not_configured",
+      ...summarizeCounts(offlineFallback),
+    });
+    return {
+      data: offlineFallback,
+      source,
+      reason: "supabase_not_configured",
+    };
   }
-  return offlineFallback;
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) {
+    const source = fromLs ? "local_fallback" : "empty_fallback";
+    console.info("[data-load] Loaded from localStorage fallback", {
+      reason: "supabase_client_unavailable",
+      ...summarizeCounts(offlineFallback),
+    });
+    return {
+      data: offlineFallback,
+      source,
+      reason: "supabase_client_unavailable",
+    };
+  }
+  try {
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) {
+      const source = fromLs ? "local_fallback" : "empty_fallback";
+      console.info("[data-load] Loaded from localStorage fallback", {
+        reason: sessionError ? "session_error" : "no_valid_session",
+        sessionError: sessionError?.message,
+        ...summarizeCounts(offlineFallback),
+      });
+      return {
+        data: offlineFallback,
+        source,
+        reason: sessionError ? "session_error" : "no_valid_session",
+      };
+    }
+
+    const remote = await fetchFullAppDataFromSupabase(supabase);
+    const sanitized = sanitizeOrphanAppDataRelations(remote);
+    writeAppDataToLocalStorage(sanitized);
+    console.info("[data-load] Loaded from Supabase", {
+      empty: isRemoteDatasetEmpty(sanitized),
+      ...summarizeCounts(sanitized),
+    });
+    return { data: sanitized, source: "supabase" };
+  } catch (error) {
+    const source = fromLs ? "local_fallback" : "empty_fallback";
+    console.error("[data-load] Remote fetch failed, using localStorage fallback", {
+      reason: "remote_fetch_error",
+      error: error instanceof Error ? error.message : String(error),
+      ...summarizeCounts(offlineFallback),
+    });
+    return {
+      data: offlineFallback,
+      source,
+      reason: "remote_fetch_error",
+    };
+  }
 }
 
 export const APP_DATA_PERSIST_ERROR_EVENT = "app-data-persist-error";

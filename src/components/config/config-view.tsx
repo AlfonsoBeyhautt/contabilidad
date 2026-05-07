@@ -5,7 +5,13 @@ import { SupabaseStatusSection } from "./supabase-status";
 import { useAppData } from "@/contexts/data-context";
 
 export function ConfigView() {
-  const { data, updateSettings, reloadAppData } = useAppData();
+  const { data, dataSource, updateSettings, reloadAppData } = useAppData();
+  const sourceLabel =
+    dataSource === "supabase"
+      ? "Supabase"
+      : dataSource === "local_fallback"
+        ? "Local backup"
+        : "Vacío (sin backup local)";
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
@@ -74,6 +80,18 @@ export function ConfigView() {
       <Card>
         <CardHeader title="Persistencia actual" subtitle="localStorage + contrato AppData" />
         <CardContent className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+          <p className="mb-2">
+            Fuente actual:{" "}
+            <strong
+              className={
+                dataSource === "supabase"
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-amber-700 dark:text-amber-400"
+              }
+            >
+              {sourceLabel}
+            </strong>
+          </p>
           <p>
             La fuente principal es <strong>Supabase</strong> cuando está
             configurado; el navegador guarda una copia en localStorage (
