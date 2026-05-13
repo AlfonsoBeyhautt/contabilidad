@@ -52,9 +52,9 @@ const expenseCatLabel: Record<ExpenseCategory, string> = {
 };
 
 const categoryDot: Record<ExpenseCategory, string> = {
-  producción: "bg-zinc-500",
+  producción: "bg-[var(--surface-muted)]0",
   marketing: "bg-blue-500",
-  "envíos": "bg-amber-500",
+  "envíos": "bg-[var(--warning-soft)]0",
   otros: "bg-stone-400",
 };
 
@@ -85,14 +85,14 @@ const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 function sourceBadge(source: CalendarItem["source"]) {
   if (source === "recurrence") {
     return (
-      <span className="inline-flex items-center gap-0.5 rounded bg-zinc-100 px-1 py-0.5 text-[9px] font-medium uppercase text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+      <span className="inline-flex items-center gap-0.5 rounded bg-[var(--surface-muted)] px-1 py-0.5 text-[9px] font-medium uppercase text-[var(--foreground)]">
         <RotateCcw className="h-2.5 w-2.5" aria-hidden /> Recurrente
       </span>
     );
   }
   if (source === "expense") {
     return (
-      <span className="rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-medium uppercase text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
+      <span className="rounded bg-[var(--success-soft)] px-1 py-0.5 text-[9px] font-medium uppercase text-[var(--success)]">
         Manual
       </span>
     );
@@ -229,7 +229,7 @@ export function CalendarioView() {
           <button
             type="button"
             onClick={() => setAnchor((d) => subMonths(d, 1))}
-            className="rounded-lg border border-zinc-200 p-2 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            className="rounded-lg border border-[var(--border)] p-2 text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
             aria-label="Mes anterior"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -240,7 +240,7 @@ export function CalendarioView() {
           <button
             type="button"
             onClick={() => setAnchor((d) => addMonths(d, 1))}
-            className="rounded-lg border border-zinc-200 p-2 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            className="rounded-lg border border-[var(--border)] p-2 text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
             aria-label="Mes siguiente"
           >
             <ChevronRight className="h-4 w-4" aria-hidden />
@@ -251,7 +251,7 @@ export function CalendarioView() {
               setAnchor(startOfMonth(new Date()));
               setSelectedDay(startOfDay(new Date()));
             }}
-            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
           >
             Hoy
           </button>
@@ -262,7 +262,7 @@ export function CalendarioView() {
             setEditing(null);
             setShowCreate(true);
           }}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--surface-inverted)] px-3 py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
         >
           <Plus className="h-4 w-4" aria-hidden />
           Programar pago
@@ -270,36 +270,36 @@ export function CalendarioView() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <p className="text-[10px] font-semibold uppercase text-zinc-500">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <p className="text-[10px] font-semibold uppercase text-[var(--foreground-muted)]">
             Total previsto del mes
           </p>
           <p className="mt-1 text-xl font-semibold tabular-nums">
             {formatCurrency(projectedTotal, currency)}
           </p>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-[var(--foreground-muted)]">
             {pending.length + paid.length} pagos planificados
           </p>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
-          <p className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">
+        <div className="rounded-xl border border-[color-mix(in_oklab,var(--warning)_25%,transparent)] bg-[var(--warning-soft)] p-4">
+          <p className="text-[10px] font-semibold uppercase text-[var(--warning)]">
             Pendientes
           </p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-amber-900 dark:text-amber-100">
+          <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--warning)]">
             {formatCurrency(pendingTotal, currency)}
           </p>
-          <p className="mt-1 text-xs text-amber-800/80 dark:text-amber-200/70">
+          <p className="mt-1 text-xs text-[var(--warning)]/80">
             {pending.length} pagos sin liquidar
           </p>
         </div>
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-          <p className="text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-300">
+        <div className="rounded-xl border border-[color-mix(in_oklab,var(--success)_25%,transparent)] bg-[var(--success-soft)] p-4">
+          <p className="text-[10px] font-semibold uppercase text-[var(--success)]">
             Pagados
           </p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-emerald-900 dark:text-emerald-100">
+          <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--success)]">
             {formatCurrency(paidTotal, currency)}
           </p>
-          <p className="mt-1 text-xs text-emerald-800/80 dark:text-emerald-200/70">
+          <p className="mt-1 text-xs text-[var(--success)]/80">
             {paid.length} pagos liquidados
           </p>
         </div>
@@ -312,7 +312,7 @@ export function CalendarioView() {
             subtitle="Cada día muestra pagos planificados, recurrencias proyectadas y gastos liquidados"
           />
           <CardContent>
-            <div className="mb-2 grid grid-cols-7 gap-1 text-[11px] font-semibold uppercase text-zinc-500">
+            <div className="mb-2 grid grid-cols-7 gap-1 text-[11px] font-semibold uppercase text-[var(--foreground-muted)]">
               {WEEKDAYS.map((w) => (
                 <div key={w} className="px-1 text-center">
                   {w}
@@ -347,24 +347,24 @@ export function CalendarioView() {
                     onClick={() => setSelectedDay(cell.date)}
                     className={`flex aspect-square min-h-[64px] flex-col rounded-lg border p-1.5 text-left transition-colors ${
                       selected
-                        ? "border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-900"
+                        ? "border-[var(--accent)] bg-[var(--accent-soft)]"
                         : isCurrent
-                          ? "border-zinc-400 bg-white dark:border-zinc-600 dark:bg-zinc-950"
-                          : "border-zinc-200 bg-white hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+                          ? "border-[var(--border-strong)] bg-[var(--surface)]"
+                          : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-muted)]"
                     }`}
                   >
                     <div className="flex items-start justify-between">
                       <span
                         className={`text-[11px] font-semibold ${
                           isCurrent
-                            ? "rounded-full bg-zinc-900 px-1.5 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                            : "text-zinc-700 dark:text-zinc-300"
+                            ? "rounded-full bg-[var(--surface-inverted)] px-1.5 text-[var(--foreground-on-inverted)]"
+                            : "text-[var(--foreground)]"
                         }`}
                       >
                         {cell.date.getDate()}
                       </span>
                       {items.length > 0 ? (
-                        <span className="text-[9px] tabular-nums text-zinc-500">
+                        <span className="text-[9px] tabular-nums text-[var(--foreground-muted)]">
                           {items.length}
                         </span>
                       ) : null}
@@ -376,8 +376,8 @@ export function CalendarioView() {
                             key={it.key}
                             className={`h-1.5 w-1.5 rounded-full ${
                               it.status === "pendiente"
-                                ? "bg-amber-500"
-                                : "bg-emerald-500"
+                                ? "bg-[var(--warning-soft)]0"
+                                : "bg-[var(--success-soft)]0"
                             }`}
                             title={`${it.description} — ${formatCurrency(it.amount, currency)}`}
                           />
@@ -386,12 +386,12 @@ export function CalendarioView() {
                     ) : null}
                     {items.length > 0 ? (
                       <div className="mt-auto">
-                        <p className="text-[9px] tabular-nums text-zinc-500">
+                        <p className="text-[9px] tabular-nums text-[var(--foreground-muted)]">
                           {pendingCount > 0
                             ? `${pendingCount} pend.`
                             : `${paidCount} pag.`}
                         </p>
-                        <p className="text-[10px] font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
+                        <p className="text-[10px] font-medium tabular-nums text-[var(--foreground)]">
                           {formatCurrency(dayTotal, currency)}
                         </p>
                       </div>
@@ -421,12 +421,12 @@ export function CalendarioView() {
             />
             <CardContent className="space-y-2 text-sm">
               {!selectedDay ? (
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-[var(--foreground-muted)]">
                   Tocá un día del calendario para ver los pagos programados,
                   pendientes o ya pagados.
                 </p>
               ) : selectedItems.length === 0 ? (
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-[var(--foreground-muted)]">
                   No hay pagos en este día.
                 </p>
               ) : (
@@ -461,18 +461,18 @@ export function CalendarioView() {
             />
             <CardContent className="space-y-2 text-sm">
               {upcomingItems.length === 0 ? (
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-[var(--foreground-muted)]">
                   No hay pagos planificados para los próximos 7 días.
                 </p>
               ) : (
                 upcomingItems.map((it) => (
                   <div
                     key={it.key}
-                    className="flex items-center justify-between rounded-lg border border-zinc-100 p-2 text-xs dark:border-zinc-800"
+                    className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] p-2 text-xs"
                   >
                     <div>
                       <p className="font-medium">{it.description}</p>
-                      <p className="text-[10px] text-zinc-500">
+                      <p className="text-[10px] text-[var(--foreground-muted)]">
                         {format(parseISO(`${it.date}T12:00:00`), "dd/MM")} ·{" "}
                         {expenseCatLabel[it.category]}
                       </p>
@@ -532,8 +532,8 @@ function PaymentRow({
     <div
       className={`rounded-lg border p-3 ${
         item.status === "pendiente"
-          ? "border-amber-200 bg-amber-50/40 dark:border-amber-900/60 dark:bg-amber-950/20"
-          : "border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/60 dark:bg-emerald-950/20"
+          ? "border-[color-mix(in_oklab,var(--warning)_25%,transparent)] bg-[var(--warning-soft)]/40"
+          : "border-[color-mix(in_oklab,var(--success)_25%,transparent)] bg-[var(--success-soft)]/40"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -546,7 +546,7 @@ function PaymentRow({
             <p className="truncate font-medium">{item.description}</p>
             {sourceBadge(item.source)}
           </div>
-          <p className="mt-0.5 text-[10px] uppercase text-zinc-500">
+          <p className="mt-0.5 text-[10px] uppercase text-[var(--foreground-muted)]">
             {expenseCatLabel[item.category]} · {item.paymentMethod}
           </p>
         </div>
@@ -558,8 +558,8 @@ function PaymentRow({
         <span
           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${
             item.status === "pendiente"
-              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-100"
-              : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-100"
+              ? "bg-[var(--warning-soft)] text-[var(--warning)]"
+              : "bg-[var(--success-soft)] text-[var(--success)]"
           }`}
         >
           {item.status === "pendiente" ? (
@@ -578,7 +578,7 @@ function PaymentRow({
               <button
                 type="button"
                 onClick={onToggle}
-                className="font-medium text-zinc-700 underline dark:text-zinc-300"
+                className="font-medium text-[var(--foreground)] underline"
               >
                 {item.status === "pendiente"
                   ? "Marcar como pagado"
@@ -588,7 +588,7 @@ function PaymentRow({
                 <button
                   type="button"
                   onClick={onEdit}
-                  className="text-zinc-600 underline dark:text-zinc-400"
+                  className="text-[var(--foreground-muted)] underline"
                 >
                   Editar
                 </button>
@@ -596,7 +596,7 @@ function PaymentRow({
               <button
                 type="button"
                 onClick={onDelete}
-                className="inline-flex items-center gap-0.5 text-red-600 underline"
+                className="inline-flex items-center gap-0.5 text-[var(--danger)] underline"
               >
                 <Trash2 className="h-3 w-3" aria-hidden />
                 Eliminar
@@ -606,12 +606,12 @@ function PaymentRow({
             <button
               type="button"
               onClick={onToggle}
-              className="text-zinc-500 underline"
+              className="text-[var(--foreground-muted)] underline"
             >
               Liquidar en Gastos
             </button>
           ) : (
-            <span className="text-zinc-500">Ya registrado en Gastos</span>
+            <span className="text-[var(--foreground-muted)]">Ya registrado en Gastos</span>
           )}
         </div>
       </div>
@@ -697,12 +697,12 @@ function ScheduledPaymentModal({
             {error ? (
               <p
                 role="alert"
-                className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/50 dark:text-red-100"
+                className="rounded-lg border border-[color-mix(in_oklab,var(--danger)_25%,transparent)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]"
               >
                 {error}
               </p>
             ) : null}
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Descripción
               <input
                 required
@@ -711,11 +711,11 @@ function ScheduledPaymentModal({
                   setForm((f) => ({ ...f, description: e.target.value }))
                 }
                 placeholder="Ej: Sueldo Juan · Mayo"
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               />
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Monto
                 <input
                   type="number"
@@ -725,10 +725,10 @@ function ScheduledPaymentModal({
                   onChange={(e) =>
                     setForm((f) => ({ ...f, amount: Number(e.target.value) }))
                   }
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 />
               </label>
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Fecha
                 <input
                   type="date"
@@ -737,11 +737,11 @@ function ScheduledPaymentModal({
                   onChange={(e) =>
                     setForm((f) => ({ ...f, dueDate: e.target.value }))
                   }
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 />
               </label>
             </div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Categoría
               <select
                 value={form.category}
@@ -751,7 +751,7 @@ function ScheduledPaymentModal({
                     category: e.target.value as ExpenseCategory,
                   }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               >
                 {expenseCats.map((c) => (
                   <option key={c} value={c}>
@@ -761,7 +761,7 @@ function ScheduledPaymentModal({
               </select>
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Pago
                 <select
                   value={form.paymentMethod}
@@ -771,7 +771,7 @@ function ScheduledPaymentModal({
                       paymentMethod: e.target.value as PaymentMethod,
                     }))
                   }
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 >
                   {payments.map((p) => (
                     <option key={p} value={p}>
@@ -780,7 +780,7 @@ function ScheduledPaymentModal({
                   ))}
                 </select>
               </label>
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Tipo
                 <select
                   value={form.kind}
@@ -790,14 +790,14 @@ function ScheduledPaymentModal({
                       kind: e.target.value as ExpenseKind,
                     }))
                   }
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 >
                   <option value="fijo">fijo</option>
                   <option value="variable">variable</option>
                 </select>
               </label>
             </div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Nota (opcional)
               <input
                 value={form.note}
@@ -805,20 +805,20 @@ function ScheduledPaymentModal({
                   setForm((f) => ({ ...f, note: e.target.value }))
                 }
                 placeholder="Ej: a Banco Galicia, alias proveedor.x"
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               />
             </label>
             <div className="flex gap-2 pt-2">
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                className="flex-1 rounded-lg bg-[var(--surface-inverted)] py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
               >
                 {initial ? "Guardar cambios" : "Programar pago"}
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700"
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
               >
                 Cancelar
               </button>

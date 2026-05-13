@@ -169,36 +169,36 @@ function SaleForm({
       {submitError ? (
         <p
           role="alert"
-          className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/50 dark:text-red-100"
+          className="rounded-lg border border-[color-mix(in_oklab,var(--danger)_25%,transparent)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]"
         >
           {submitError}
         </p>
       ) : null}
       {products.length === 0 ? (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+        <p className="rounded-lg border border-[color-mix(in_oklab,var(--warning)_25%,transparent)] bg-[var(--warning-soft)] px-3 py-2 text-sm text-[var(--warning)]">
           No hay productos cargados. Cerrá este formulario y agregá productos
           en la sección Productos.
         </p>
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <label className="text-xs font-medium text-[var(--foreground-muted)]">
           Fecha y hora
           <input
             type="datetime-local"
             required
             value={saleDate}
             onChange={(e) => setSaleDate(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
           />
         </label>
-        <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <label className="text-xs font-medium text-[var(--foreground-muted)]">
           Pago
           <select
             value={salePayment}
             onChange={(e) =>
               setSalePayment(e.target.value as PaymentMethod)
             }
-            className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
           >
             {payments.map((p) => (
               <option key={p} value={p}>
@@ -208,12 +208,12 @@ function SaleForm({
           </select>
         </label>
       </div>
-      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+      <label className="text-xs font-medium text-[var(--foreground-muted)]">
         Cliente (opcional)
         <select
           value={saleCustomer}
           onChange={(e) => setSaleCustomer(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
         >
           <option value="">Sin cliente</option>
           {customers.map((c) => (
@@ -224,8 +224,8 @@ function SaleForm({
         </select>
       </label>
 
-      <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-        <p className="mb-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+      <div className="rounded-lg border border-[var(--border)] p-3">
+        <p className="mb-2 text-xs font-semibold text-[var(--foreground)]">
           Líneas
         </p>
         <div className="flex flex-wrap gap-2">
@@ -242,7 +242,7 @@ function SaleForm({
                 size: "",
               }));
             }}
-            className="min-w-[120px] flex-1 rounded-lg border border-zinc-200 px-2 py-1.5 text-sm disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
+            className="min-w-[120px] flex-1 rounded-lg border border-[var(--border)] px-2 py-1.5 text-sm disabled:opacity-50"
           >
             {products.length === 0 ? (
               <option value="">Sin productos</option>
@@ -260,7 +260,7 @@ function SaleForm({
             onChange={(e) =>
               setLineForm((prev) => ({ ...prev, size: e.target.value }))
             }
-            className="min-w-[100px] rounded-lg border border-zinc-200 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="min-w-[100px] rounded-lg border border-[var(--border)] px-2 py-1.5 text-sm"
           >
             {sizeOpts.map((o) => (
               <option key={o.label + o.value} value={o.value}>
@@ -278,7 +278,7 @@ function SaleForm({
                 quantity: Number(e.target.value) || 1,
               }))
             }
-            className="w-20 rounded-lg border border-zinc-200 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-20 rounded-lg border border-[var(--border)] px-2 py-1.5 text-sm"
           />
           <input
             type="number"
@@ -291,19 +291,19 @@ function SaleForm({
                 discount: Number(e.target.value) || 0,
               }))
             }
-            className="w-24 rounded-lg border border-zinc-200 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-24 rounded-lg border border-[var(--border)] px-2 py-1.5 text-sm"
           />
           <button
             type="button"
             disabled={products.length === 0}
             onClick={pushLine}
-            className="rounded-lg bg-zinc-200 px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-800"
+            className="rounded-lg bg-[var(--surface-muted)] px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40"
           >
             Añadir línea
           </button>
         </div>
         {lines.length > 0 ? (
-          <ul className="mt-2 space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+          <ul className="mt-2 space-y-1 text-xs text-[var(--foreground-muted)]">
             {lines.map((l, i) => (
               <li key={i}>
                 {saleLineText(products, l)} —{" "}
@@ -318,14 +318,14 @@ function SaleForm({
         <button
           type="submit"
           disabled={products.length === 0}
-          className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+          className="flex-1 rounded-lg bg-[var(--surface-inverted)] py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {submitLabel}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700"
+          className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
         >
           Cancelar
         </button>
@@ -455,7 +455,7 @@ export function VentasView() {
               : undefined
           }
           onClick={() => setOpenNew(true)}
-          className="ml-auto inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900 dark:disabled:opacity-40"
+          className="ml-auto inline-flex items-center gap-2 rounded-lg bg-[var(--surface-inverted)] px-4 py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Plus className="h-4 w-4" />
           Registrar venta
@@ -481,23 +481,23 @@ export function VentasView() {
               const cust = data.customers.find((c) => c.id === s.customerId);
               const desc = s.lines.map((l) => saleLineText(data.products, l)).join(", ");
               return (
-                <div key={s.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+                <div key={s.id} className="rounded-lg border border-[var(--border)] p-3">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs text-zinc-500">{formatDateTime(s.date)}</p>
-                    <span className="capitalize text-xs text-zinc-500">{s.paymentMethod}</span>
+                    <p className="text-xs text-[var(--foreground-muted)]">{formatDateTime(s.date)}</p>
+                    <span className="capitalize text-xs text-[var(--foreground-muted)]">{s.paymentMethod}</span>
                   </div>
                   <p className="mt-2 text-sm">{desc}</p>
-                  <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">Cliente: {cust?.name ?? "—"}</p>
+                  <p className="mt-1 text-xs text-[var(--foreground-muted)]">Cliente: {cust?.name ?? "—"}</p>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                    <p><span className="text-zinc-500">Total:</span> <span className="font-medium tabular-nums">{formatCurrency(saleTotal(s))}</span></p>
-                    <p><span className="text-zinc-500">COGS:</span> <span className="font-medium tabular-nums">{formatCurrency(saleCogs(s))}</span></p>
-                    <p><span className="text-zinc-500">Gan.:</span> <span className="font-medium tabular-nums text-emerald-700 dark:text-emerald-400">{formatCurrency(saleGrossProfit(s))}</span></p>
+                    <p><span className="text-[var(--foreground-muted)]">Total:</span> <span className="font-medium tabular-nums">{formatCurrency(saleTotal(s))}</span></p>
+                    <p><span className="text-[var(--foreground-muted)]">COGS:</span> <span className="font-medium tabular-nums">{formatCurrency(saleCogs(s))}</span></p>
+                    <p><span className="text-[var(--foreground-muted)]">Gan.:</span> <span className="font-medium tabular-nums text-[var(--success)]">{formatCurrency(saleGrossProfit(s))}</span></p>
                   </div>
                   <div className="mt-3 flex justify-end gap-1">
                     <button
                       type="button"
                       onClick={() => setEditingSale(s)}
-                      className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                      className="rounded p-1.5 text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
                       aria-label="Editar venta"
                     >
                       <Pencil className="h-4 w-4" />
@@ -505,7 +505,7 @@ export function VentasView() {
                     <button
                       type="button"
                       onClick={() => handleDeleteSale(s)}
-                      className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                      className="rounded p-1.5 text-[var(--danger)] hover:bg-[var(--danger-soft)]"
                       aria-label="Eliminar venta"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -516,7 +516,7 @@ export function VentasView() {
             })}
           </div>
           <table className="hidden w-full min-w-[920px] text-left text-sm md:table">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
+            <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs font-semibold uppercase text-[var(--foreground-muted)]/50">
               <tr>
                 <th className="px-4 py-3">Fecha</th>
                 <th className="px-4 py-3">Detalle</th>
@@ -528,25 +528,25 @@ export function VentasView() {
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-[var(--border-subtle)]">
               {filtered.map((s) => {
                 const cust = data.customers.find((c) => c.id === s.customerId);
                 const desc = s.lines
                   .map((l) => saleLineText(data.products, l))
                   .join(", ");
                 return (
-                  <tr key={s.id} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-900/40">
-                    <td className="whitespace-nowrap px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                  <tr key={s.id} className="hover:bg-[var(--surface-muted)]/80/40">
+                    <td className="whitespace-nowrap px-4 py-3 text-[var(--foreground-muted)]">
                       {formatDateTime(s.date)}
                     </td>
                     <td className="max-w-xs truncate px-4 py-3">{desc}</td>
                     <td className="px-4 py-3 text-right font-medium tabular-nums">
                       {formatCurrency(saleTotal(s))}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-zinc-500">
+                    <td className="px-4 py-3 text-right tabular-nums text-[var(--foreground-muted)]">
                       {formatCurrency(saleCogs(s))}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-emerald-700 dark:text-emerald-400">
+                    <td className="px-4 py-3 text-right tabular-nums text-[var(--success)]">
                       {formatCurrency(saleGrossProfit(s))}
                     </td>
                     <td className="px-4 py-3 capitalize">{s.paymentMethod}</td>
@@ -556,7 +556,7 @@ export function VentasView() {
                         <button
                           type="button"
                           onClick={() => setEditingSale(s)}
-                          className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                          className="rounded p-1.5 text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
                           aria-label="Editar venta"
                         >
                           <Pencil className="h-4 w-4" />
@@ -564,7 +564,7 @@ export function VentasView() {
                         <button
                           type="button"
                           onClick={() => handleDeleteSale(s)}
-                          className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                          className="rounded p-1.5 text-[var(--danger)] hover:bg-[var(--danger-soft)]"
                           aria-label="Eliminar venta"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -577,7 +577,7 @@ export function VentasView() {
             </tbody>
           </table>
           {filtered.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-zinc-500">
+            <p className="px-4 py-8 text-center text-sm text-[var(--foreground-muted)]">
               No hay ventas en este criterio.
             </p>
           ) : null}
@@ -636,8 +636,8 @@ export function VentasView() {
 
 function Summary({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--foreground-muted)]">
         {label}
       </p>
       <p className="mt-1 text-lg font-semibold tabular-nums">{value}</p>
@@ -657,12 +657,12 @@ function FilterSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+    <label className="text-xs font-medium text-[var(--foreground-muted)]">
       {label}
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 block min-w-[140px] rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        className="mt-1 block min-w-[140px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-sm"
       >
         {options.map((o) => (
           <option key={o.value || "all"} value={o.value}>

@@ -44,19 +44,23 @@ export function SupabaseStatusSection() {
 
   return (
     <Card>
-      <CardHeader title="Supabase · Postgres" subtitle="Backend del dueño único — sin usuarios externos" />
-      <CardContent className="space-y-3 text-sm">
-        <dl className="grid gap-2 text-zinc-700 dark:text-zinc-300">
+      <CardHeader
+        eyebrow="Infraestructura"
+        title="Supabase · Postgres"
+        subtitle="Backend del dueño único — sin usuarios externos"
+      />
+      <CardContent className="space-y-3 text-[13px]">
+        <dl className="grid gap-2 text-[var(--foreground)]">
           <div className="flex justify-between gap-4">
-            <dt className="text-zinc-500 dark:text-zinc-400">
+            <dt className="text-[var(--foreground-muted)]">
               Credenciales (URL + anon key)
             </dt>
             <dd className="font-medium">
               <span
                 className={
                   configured
-                    ? "text-emerald-700 dark:text-emerald-400"
-                    : "text-amber-800 dark:text-amber-400"
+                    ? "text-[var(--success)]"
+                    : "text-[var(--warning)]"
                 }
               >
                 {credLabel}
@@ -64,13 +68,13 @@ export function SupabaseStatusSection() {
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-zinc-500 dark:text-zinc-400">Conexión (health_check)</dt>
-            <dd className="font-medium text-zinc-900 dark:text-zinc-100">
+            <dt className="text-[var(--foreground-muted)]">Conexión (health_check)</dt>
+            <dd className="font-medium text-[var(--foreground-strong)]">
               {connLabel}
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-zinc-500 dark:text-zinc-400">Estado en el navegador</dt>
+            <dt className="text-[var(--foreground-muted)]">Estado en el navegador</dt>
             <dd className="font-medium">
               {configured && conn === "ok"
                 ? "Datos en memoria; respaldo local opcional"
@@ -78,7 +82,7 @@ export function SupabaseStatusSection() {
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-zinc-500 dark:text-zinc-400">Persistencia remota</dt>
+            <dt className="text-[var(--foreground-muted)]">Persistencia remota</dt>
             <dd className="font-medium">
               {configured && conn === "ok"
                 ? "Supabase (el panel lee y escribe aquí)"
@@ -88,7 +92,7 @@ export function SupabaseStatusSection() {
             </dd>
           </div>
         </dl>
-        <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+        <p className="text-[11.5px] leading-relaxed text-[var(--foreground-muted)]">
           El acceso al panel es con <strong>Supabase Auth</strong> (cuenta propia). Las
           tablas usan RLS: hace falta sesión iniciada. El esquema está pensado para{" "}
           <strong>un solo operador</strong> (sin alta pública de clientes en esta app).

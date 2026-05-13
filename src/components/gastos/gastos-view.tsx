@@ -139,15 +139,15 @@ export function GastosView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-4 dark:border-zinc-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-4">
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setSubTab("gastos")}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               tab === "gastos"
-                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                ? "bg-[var(--surface-inverted)] text-[var(--foreground-on-inverted)]"
+                : "text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
             }`}
           >
             Gastos registrados
@@ -157,8 +157,8 @@ export function GastosView() {
             onClick={() => setSubTab("recurrentes")}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               tab === "recurrentes"
-                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                ? "bg-[var(--surface-inverted)] text-[var(--foreground-on-inverted)]"
+                : "text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
             }`}
           >
             Gastos recurrentes
@@ -168,8 +168,8 @@ export function GastosView() {
             onClick={() => setSubTab("defectuosos")}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               tab === "defectuosos"
-                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                ? "bg-[var(--surface-inverted)] text-[var(--foreground-on-inverted)]"
+                : "text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
             }`}
           >
             Defectuosos
@@ -182,7 +182,7 @@ export function GastosView() {
             setEditingExpense(null);
             setOpen(true);
           }}
-          className="shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="shrink-0 rounded-lg bg-[var(--surface-inverted)] px-4 py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
         >
           Registrar gasto
         </button>
@@ -191,21 +191,21 @@ export function GastosView() {
       {tab === "gastos" ? (
         <>
           <div className="flex flex-wrap justify-between gap-4">
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-900/70">
-              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-5 py-4/70">
+              <p className="text-xs font-medium text-[var(--foreground-muted)]">
                 Total gastos registrados (período)
               </p>
-              <p className="text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+              <p className="text-xl font-semibold tabular-nums text-[var(--foreground-strong)]">
                 {formatCurrency(currentTotal)}
               </p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="mt-1 text-xs text-[var(--foreground-muted)]">
                 La gráfica incluye una barra aparte por defectuosos (no se suma
                 aquí). vs período anterior simétrico:{" "}
                 <span
                   className={
                     currentTotal <= prevMetrics.expenses
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-red-600 dark:text-red-400"
+                      ? "text-[var(--success)]"
+                      : "text-[var(--danger)]"
                   }
                 >
                   {formatCurrency(prevMetrics.expenses)}
@@ -222,7 +222,7 @@ export function GastosView() {
             <CardContent className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-zinc-200 dark:stroke-zinc-800" />
+                  <CartesianGrid strokeDasharray="3 3" className="" />
                   <XAxis dataKey="categoria" tick={{ fontSize: 10 }} interval={0} angle={-25} textAnchor="end" height={70} />
                   <YAxis tickFormatter={(v) => `${v / 1000}k`} />
                   <Tooltip
@@ -246,21 +246,21 @@ export function GastosView() {
             <CardContent className="overflow-x-auto p-0">
               <div className="space-y-3 p-3 md:hidden">
                 {filtered.map((e) => (
-                  <div key={e.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+                  <div key={e.id} className="rounded-lg border border-[var(--border)] p-3">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-xs text-zinc-500">{formatDate(e.date)}</p>
-                      <span className="capitalize text-xs text-zinc-500">{e.paymentMethod}</span>
+                      <p className="text-xs text-[var(--foreground-muted)]">{formatDate(e.date)}</p>
+                      <span className="capitalize text-xs text-[var(--foreground-muted)]">{e.paymentMethod}</span>
                     </div>
                     <p className="mt-2 font-medium">
                       {e.description}
                       {e.fromRecurrenceId ? (
-                        <span className="ml-1 text-[10px] text-zinc-400">(auto)</span>
+                        <span className="ml-1 text-[10px] text-[var(--foreground-subtle)]">(auto)</span>
                       ) : null}
                     </p>
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                      <p><span className="text-zinc-500">Categoría:</span> <span className="font-medium">{expenseCatLabel[e.category] ?? e.category}</span></p>
-                      <p><span className="text-zinc-500">Tipo:</span> <span className="font-medium">{e.kind}</span></p>
-                      <p className="col-span-2"><span className="text-zinc-500">Monto:</span> <span className="font-medium tabular-nums">{formatCurrency(e.amount)}</span></p>
+                      <p><span className="text-[var(--foreground-muted)]">Categoría:</span> <span className="font-medium">{expenseCatLabel[e.category] ?? e.category}</span></p>
+                      <p><span className="text-[var(--foreground-muted)]">Tipo:</span> <span className="font-medium">{e.kind}</span></p>
+                      <p className="col-span-2"><span className="text-[var(--foreground-muted)]">Monto:</span> <span className="font-medium tabular-nums">{formatCurrency(e.amount)}</span></p>
                     </div>
                     <div className="mt-3 flex justify-end gap-1">
                       <button
@@ -269,7 +269,7 @@ export function GastosView() {
                           setEditingExpense(e);
                           setOpen(true);
                         }}
-                        className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                        className="rounded p-1.5 text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
                         aria-label="Editar gasto"
                       >
                         <Pencil className="h-4 w-4" />
@@ -285,7 +285,7 @@ export function GastosView() {
                             deleteExpense(e.id);
                           }
                         }}
-                        className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                        className="rounded p-1.5 text-[var(--danger)] hover:bg-[var(--danger-soft)]"
                         aria-label="Eliminar gasto"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -295,7 +295,7 @@ export function GastosView() {
                 ))}
               </div>
               <table className="hidden w-full min-w-[800px] text-left text-sm md:table">
-                <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
+                <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs font-semibold uppercase text-[var(--foreground-muted)]/50">
                   <tr>
                     <th className="px-4 py-3">Fecha</th>
                     <th className="px-4 py-3">Categoría</th>
@@ -306,7 +306,7 @@ export function GastosView() {
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                <tbody className="divide-y divide-[var(--border-subtle)]">
                   {filtered.map((e) => (
                     <tr key={e.id}>
                       <td className="px-4 py-3">{formatDate(e.date)}</td>
@@ -316,7 +316,7 @@ export function GastosView() {
                       <td className="max-w-xs truncate px-4 py-3">
                         {e.description}
                         {e.fromRecurrenceId ? (
-                          <span className="ml-1 text-[10px] text-zinc-400">
+                          <span className="ml-1 text-[10px] text-[var(--foreground-subtle)]">
                             (auto)
                           </span>
                         ) : null}
@@ -334,7 +334,7 @@ export function GastosView() {
                               setEditingExpense(e);
                               setOpen(true);
                             }}
-                            className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                            className="rounded p-1.5 text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
                             aria-label="Editar gasto"
                           >
                             <Pencil className="h-4 w-4" />
@@ -350,7 +350,7 @@ export function GastosView() {
                                 deleteExpense(e.id);
                               }
                             }}
-                            className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                            className="rounded p-1.5 text-[var(--danger)] hover:bg-[var(--danger-soft)]"
                             aria-label="Eliminar gasto"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -369,14 +369,14 @@ export function GastosView() {
       {tab === "recurrentes" ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="max-w-xl text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="max-w-xl text-sm text-[var(--foreground-muted)]">
               Los gastos generados cuentan igual que un gasto manual en reportes
               y dashboard.
             </p>
             <button
               type="button"
               onClick={() => setOpenRec(true)}
-              className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 dark:border-zinc-600 dark:text-zinc-200"
+              className="rounded-lg border border-[var(--border-strong)] px-4 py-2 text-sm font-medium text-[var(--foreground)]"
             >
               Nueva recurrencia
             </button>
@@ -389,15 +389,15 @@ export function GastosView() {
             <CardContent className="overflow-x-auto p-0">
               <div className="space-y-3 p-3 md:hidden">
                 {recurrences.map((r) => (
-                  <div key={r.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+                  <div key={r.id} className="rounded-lg border border-[var(--border)] p-3">
                     <p className="font-medium">{r.description}</p>
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                      <p><span className="text-zinc-500">Monto:</span> <span className="font-medium tabular-nums">{formatCurrency(r.amount)}</span></p>
-                      <p><span className="text-zinc-500">Frecuencia:</span> <span className="font-medium">{freqLabel[r.frequency]}</span></p>
-                      <p><span className="text-zinc-500">Próxima:</span> <span className="font-medium tabular-nums">{r.nextRunAt}</span></p>
+                      <p><span className="text-[var(--foreground-muted)]">Monto:</span> <span className="font-medium tabular-nums">{formatCurrency(r.amount)}</span></p>
+                      <p><span className="text-[var(--foreground-muted)]">Frecuencia:</span> <span className="font-medium">{freqLabel[r.frequency]}</span></p>
+                      <p><span className="text-[var(--foreground-muted)]">Próxima:</span> <span className="font-medium tabular-nums">{r.nextRunAt}</span></p>
                       <p>
-                        <span className="text-zinc-500">Estado:</span>{" "}
-                        <span className={r.paused ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}>
+                        <span className="text-[var(--foreground-muted)]">Estado:</span>{" "}
+                        <span className={r.paused ? "text-[var(--warning)]" : "text-[var(--success)]"}>
                           {r.paused ? "Pausado" : "Activo"}
                         </span>
                       </p>
@@ -408,7 +408,7 @@ export function GastosView() {
                         onClick={() =>
                           updateExpenseRecurrence(r.id, { paused: !r.paused })
                         }
-                        className="text-zinc-600 underline dark:text-zinc-400"
+                        className="text-[var(--foreground-muted)] underline"
                       >
                         {r.paused ? "Reactivar" : "Pausar"}
                       </button>
@@ -423,7 +423,7 @@ export function GastosView() {
                             deleteExpenseRecurrence(r.id);
                           }
                         }}
-                        className="text-red-600 underline"
+                        className="text-[var(--danger)] underline"
                       >
                         Eliminar
                       </button>
@@ -432,7 +432,7 @@ export function GastosView() {
                 ))}
               </div>
               <table className="hidden w-full min-w-[800px] text-left text-sm md:table">
-                <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
+                <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs font-semibold uppercase text-[var(--foreground-muted)]/50">
                   <tr>
                     <th className="px-4 py-3">Descripción</th>
                     <th className="px-4 py-3 text-right">Monto</th>
@@ -442,7 +442,7 @@ export function GastosView() {
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                <tbody className="divide-y divide-[var(--border-subtle)]">
                   {recurrences.map((r) => (
                     <tr key={r.id}>
                       <td className="max-w-[200px] truncate px-4 py-3 font-medium">
@@ -455,11 +455,11 @@ export function GastosView() {
                       <td className="px-4 py-3 tabular-nums">{r.nextRunAt}</td>
                       <td className="px-4 py-3">
                         {r.paused ? (
-                          <span className="text-amber-700 dark:text-amber-400">
+                          <span className="text-[var(--warning)]">
                             Pausado
                           </span>
                         ) : (
-                          <span className="text-emerald-700 dark:text-emerald-400">
+                          <span className="text-[var(--success)]">
                             Activo
                           </span>
                         )}
@@ -470,7 +470,7 @@ export function GastosView() {
                           onClick={() =>
                             updateExpenseRecurrence(r.id, { paused: !r.paused })
                           }
-                          className="mr-2 text-xs text-zinc-600 underline dark:text-zinc-400"
+                          className="mr-2 text-xs text-[var(--foreground-muted)] underline"
                         >
                           {r.paused ? "Reactivar" : "Pausar"}
                         </button>
@@ -485,7 +485,7 @@ export function GastosView() {
                               deleteExpenseRecurrence(r.id);
                             }
                           }}
-                          className="text-xs text-red-600 underline"
+                          className="text-xs text-[var(--danger)] underline"
                         >
                           Eliminar
                         </button>
@@ -495,7 +495,7 @@ export function GastosView() {
                 </tbody>
               </table>
               {recurrences.length === 0 ? (
-                <p className="px-4 py-8 text-center text-sm text-zinc-500">
+                <p className="px-4 py-8 text-center text-sm text-[var(--foreground-muted)]">
                   No hay recurrencias. Creá una con &quot;Nueva recurrencia&quot;.
                 </p>
               ) : null}
@@ -631,12 +631,12 @@ function ExpenseModal({
             {submitError ? (
               <p
                 role="alert"
-                className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900 dark:bg-red-950/50 dark:text-red-100"
+                className="rounded-lg border border-[color-mix(in_oklab,var(--danger)_25%,transparent)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]"
               >
                 {submitError}
               </p>
             ) : null}
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Fecha
               <input
                 type="date"
@@ -645,10 +645,10 @@ function ExpenseModal({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, date: e.target.value }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               />
             </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Categoría
               <select
                 value={form.category}
@@ -658,7 +658,7 @@ function ExpenseModal({
                     category: e.target.value as ExpenseCategory,
                   }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               >
                 {expenseCats.map((c) => (
                   <option key={c} value={c}>
@@ -667,7 +667,7 @@ function ExpenseModal({
                 ))}
               </select>
             </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Descripción
               <input
                 required
@@ -675,10 +675,10 @@ function ExpenseModal({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, description: e.target.value }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               />
             </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Monto
               <input
                 type="number"
@@ -688,11 +688,11 @@ function ExpenseModal({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, amount: Number(e.target.value) }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               />
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Pago
                 <select
                   value={form.paymentMethod}
@@ -702,7 +702,7 @@ function ExpenseModal({
                       paymentMethod: e.target.value as PaymentMethod,
                     }))
                   }
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 >
                   {payments.map((p) => (
                     <option key={p} value={p}>
@@ -711,7 +711,7 @@ function ExpenseModal({
                   ))}
                 </select>
               </label>
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Fijo / variable
                 <select
                   value={form.kind}
@@ -721,34 +721,34 @@ function ExpenseModal({
                       kind: e.target.value as ExpenseKind,
                     }))
                   }
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 >
                   <option value="fijo">fijo</option>
                   <option value="variable">variable</option>
                 </select>
               </label>
             </div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Nota comprobante (opcional)
               <input
                 value={form.receiptNote}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, receiptNote: e.target.value }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               />
             </label>
             <div className="flex gap-2 pt-2">
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                className="flex-1 rounded-lg bg-[var(--surface-inverted)] py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
               >
                 Guardar
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700"
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
               >
                 Cancelar
               </button>
@@ -806,7 +806,7 @@ function RecurrenceModal({
               });
             }}
           >
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Descripción
               <input
                 required
@@ -814,10 +814,10 @@ function RecurrenceModal({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, description: e.target.value }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               />
             </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Monto
               <input
                 type="number"
@@ -827,10 +827,10 @@ function RecurrenceModal({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, amount: Number(e.target.value) }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               />
             </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Frecuencia
               <select
                 value={form.frequency}
@@ -840,7 +840,7 @@ function RecurrenceModal({
                     frequency: e.target.value as RecurrenceFrequency,
                   }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               >
                 {(Object.keys(freqLabel) as RecurrenceFrequency[]).map((k) => (
                   <option key={k} value={k}>
@@ -850,7 +850,7 @@ function RecurrenceModal({
               </select>
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Fecha inicio
                 <input
                   type="date"
@@ -859,10 +859,10 @@ function RecurrenceModal({
                   onChange={(e) =>
                     setForm((f) => ({ ...f, startDate: e.target.value }))
                   }
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 />
               </label>
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Próxima emisión
                 <input
                   type="date"
@@ -871,11 +871,11 @@ function RecurrenceModal({
                   onChange={(e) =>
                     setForm((f) => ({ ...f, nextRunAt: e.target.value }))
                   }
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 />
               </label>
             </div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Fin opcional (dejar vacío = sin fin)
               <input
                 type="date"
@@ -883,10 +883,10 @@ function RecurrenceModal({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, endDate: e.target.value }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               />
             </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Categoría
               <select
                 value={form.category}
@@ -896,7 +896,7 @@ function RecurrenceModal({
                     category: e.target.value as ExpenseCategory,
                   }))
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               >
                 {expenseCats.map((c) => (
                   <option key={c} value={c}>
@@ -906,7 +906,7 @@ function RecurrenceModal({
               </select>
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Pago
                 <select
                   value={form.paymentMethod}
@@ -916,7 +916,7 @@ function RecurrenceModal({
                       paymentMethod: e.target.value as PaymentMethod,
                     }))
                   }
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 >
                   {payments.map((p) => (
                     <option key={p} value={p}>
@@ -925,7 +925,7 @@ function RecurrenceModal({
                   ))}
                 </select>
               </label>
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Tipo
                 <select
                   value={form.kind}
@@ -935,14 +935,14 @@ function RecurrenceModal({
                       kind: e.target.value as ExpenseKind,
                     }))
                   }
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 >
                   <option value="fijo">fijo</option>
                   <option value="variable">variable</option>
                 </select>
               </label>
             </div>
-            <label className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+            <label className="flex items-center gap-2 text-xs text-[var(--foreground-muted)]">
               <input
                 type="checkbox"
                 checked={form.paused}
@@ -955,14 +955,14 @@ function RecurrenceModal({
             <div className="flex gap-2 pt-2">
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                className="flex-1 rounded-lg bg-[var(--surface-inverted)] py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
               >
                 Guardar
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700"
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
               >
                 Cancelar
               </button>

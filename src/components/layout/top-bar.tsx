@@ -17,6 +17,7 @@ const titles: Record<string, string> = {
   "/costos": "Costos",
   "/clientes": "Clientes",
   "/calendario": "Calendario de pagos",
+  "/inteligencia": "Inteligencia del negocio",
   "/reportes": "Reportes",
   "/configuracion": "Configuración",
 };
@@ -31,6 +32,7 @@ const subtitles: Record<string, string> = {
   "/costos": "Estructura de costos y márgenes",
   "/clientes": "Base de clientes y comportamiento",
   "/calendario": "Pagos previstos y vencimientos",
+  "/inteligencia": "Análisis automático y recomendaciones estratégicas",
   "/reportes": "Documentos analíticos descargables",
   "/configuracion": "Preferencias y branding",
 };

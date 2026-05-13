@@ -56,22 +56,22 @@ export function ConfigView() {
           subtitle="Visible solo en este panel administrativo"
         />
         <CardContent className="space-y-4">
-          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          <label className="block text-xs font-medium text-[var(--foreground-muted)]">
             Nombre comercial (interno)
             <input
               type="text"
               value={data.settings.shopName}
               onChange={(e) => updateSettings({ shopName: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
             />
           </label>
-          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          <label className="block text-xs font-medium text-[var(--foreground-muted)]">
             Moneda mostrada
             <input
               type="text"
               value={data.settings.currency}
               onChange={(e) => updateSettings({ currency: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className="mt-1 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
             />
           </label>
           <label className="flex items-center gap-2 text-sm">
@@ -81,23 +81,23 @@ export function ConfigView() {
               onChange={(e) =>
                 updateSettings({ lowStockAlerts: e.target.checked })
               }
-              className="rounded border-zinc-300"
+              className="rounded border-[var(--border-strong)]"
             />
             Alertas de stock bajo en tablero
           </label>
 
-          <div className="space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+          <div className="space-y-3 border-t border-[var(--border-subtle)] pt-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--foreground-muted)]">
                 Logo del negocio
               </p>
-              <p className="mt-1 text-xs text-zinc-500">
+              <p className="mt-1 text-xs text-[var(--foreground-muted)]">
                 Se muestra en los reportes PDF. PNG / JPG / WEBP / SVG, máximo{" "}
                 {Math.round(MAX_LOGO_BYTES / 1024)} KB. Recomendado: cuadrado o
                 rectangular con fondo transparente.
               </p>
               <div className="mt-3 flex items-start gap-4">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]">
                   {data.settings.logoDataUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
@@ -107,7 +107,7 @@ export function ConfigView() {
                     />
                   ) : (
                     <ImageIcon
-                      className="h-8 w-8 text-zinc-400"
+                      className="h-8 w-8 text-[var(--foreground-subtle)]"
                       aria-hidden
                     />
                   )}
@@ -117,7 +117,7 @@ export function ConfigView() {
                     <button
                       type="button"
                       onClick={() => fileRef.current?.click()}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
                     >
                       <Upload className="h-3.5 w-3.5" aria-hidden />
                       {data.settings.logoDataUrl ? "Reemplazar logo" : "Subir logo"}
@@ -126,7 +126,7 @@ export function ConfigView() {
                       <button
                         type="button"
                         onClick={() => updateSettings({ logoDataUrl: undefined })}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900 dark:bg-zinc-950 dark:text-red-300 dark:hover:bg-red-950/40"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_oklab,var(--danger)_25%,transparent)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]"
                       >
                         <Trash2 className="h-3.5 w-3.5" aria-hidden />
                         Quitar
@@ -147,7 +147,7 @@ export function ConfigView() {
                   {logoError ? (
                     <p
                       role="alert"
-                      className="text-xs text-red-600 dark:text-red-400"
+                      className="text-xs text-[var(--danger)]"
                     >
                       {logoError}
                     </p>
@@ -156,7 +156,7 @@ export function ConfigView() {
               </div>
             </div>
 
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Pie de página de los PDF (opcional)
               <input
                 type="text"
@@ -165,12 +165,12 @@ export function ConfigView() {
                   updateSettings({ legalFooter: e.target.value })
                 }
                 placeholder="Ej: CUIT 20-XXXXXXXX-X · contacto@empresa.com"
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
               />
             </label>
           </div>
 
-          <div className="border-t border-zinc-100 pt-4 dark:border-zinc-800">
+          <div className="border-t border-[var(--border-subtle)] pt-4">
             <button
               type="button"
               onClick={() => {
@@ -182,11 +182,11 @@ export function ConfigView() {
                   void reloadAppData();
                 }
               }}
-              className="w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-50 dark:border-red-900 dark:bg-zinc-950 dark:text-red-300 dark:hover:bg-red-950/40"
+              className="w-full rounded-lg border border-[color-mix(in_oklab,var(--danger)_25%,transparent)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]"
             >
               Borrar caché local y recargar
             </button>
-            <p className="mt-2 text-xs text-zinc-500">
+            <p className="mt-2 text-xs text-[var(--foreground-muted)]">
               No restaura datos de prueba: solo limpia localStorage y repite la
               carga inicial (Supabase primero).
             </p>
@@ -198,14 +198,14 @@ export function ConfigView() {
 
       <Card>
         <CardHeader title="Persistencia actual" subtitle="localStorage + contrato AppData" />
-        <CardContent className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+        <CardContent className="text-sm leading-relaxed text-[var(--foreground-muted)]">
           <p className="mb-2">
             Fuente actual:{" "}
             <strong
               className={
                 dataSource === "supabase"
-                  ? "text-emerald-700 dark:text-emerald-400"
-                  : "text-amber-700 dark:text-amber-400"
+                  ? "text-[var(--success)]"
+                  : "text-[var(--warning)]"
               }
             >
               {sourceLabel}
@@ -214,7 +214,7 @@ export function ConfigView() {
           <p>
             La fuente principal es <strong>Supabase</strong> cuando está
             configurado; el navegador guarda una copia en localStorage (
-            <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">
+            <code className="rounded bg-[var(--surface-muted)] px-1">
               AppData
             </code>
             ) como respaldo si falla la lectura remota. No se cargan datos demo
@@ -225,7 +225,7 @@ export function ConfigView() {
 
       <Card>
         <CardHeader title="Acceso" />
-        <CardContent className="text-sm text-zinc-600 dark:text-zinc-400">
+        <CardContent className="text-sm text-[var(--foreground-muted)]">
           El acceso al panel usa <strong>Supabase Auth</strong> (email y contraseña).
           Las cuentas se administran desde el dashboard de Supabase; no hay alta
           pública en esta app.

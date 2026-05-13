@@ -129,7 +129,7 @@ export function DefectuososSection() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+      <div className="rounded-lg border border-[color-mix(in_oklab,var(--warning)_25%,transparent)]/80 bg-[var(--warning-soft)]/90 px-4 py-3 text-sm text-[var(--warning)]/50">
         <p className="font-medium">Defectuosos — pérdida de producción</p>
         <p className="mt-1 text-xs opacity-90">
           Misma categoría de costo que en el resumen financiero (dashboard,
@@ -139,19 +139,19 @@ export function DefectuososSection() {
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/60">
-            <p className="text-[10px] font-semibold uppercase text-zinc-500 dark:text-zinc-400">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3/60">
+            <p className="text-[10px] font-semibold uppercase text-[var(--foreground-muted)]">
               Unidades defectuosas (período)
             </p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--foreground-strong)]">
               {totals.qty}
             </p>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/60">
-            <p className="text-[10px] font-semibold uppercase text-zinc-500 dark:text-zinc-400">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3/60">
+            <p className="text-[10px] font-semibold uppercase text-[var(--foreground-muted)]">
               Costo perdido (período)
             </p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--foreground-strong)]">
               {formatCurrency(totals.cost)}
             </p>
           </div>
@@ -165,7 +165,7 @@ export function DefectuososSection() {
               : undefined
           }
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--surface-inverted)] px-4 py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
           Registrar defectuoso
@@ -180,8 +180,8 @@ export function DefectuososSection() {
             onClick={() => setBreakdown(t.id)}
             className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
               breakdown === t.id
-                ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
-                : "border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                ? "border-[var(--surface-inverted)] bg-[var(--surface-inverted)] text-[var(--foreground-on-inverted)]"
+                : "border-[var(--border)] text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
             }`}
           >
             {t.label}
@@ -197,7 +197,7 @@ export function DefectuososSection() {
           />
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
+              <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs font-semibold uppercase text-[var(--foreground-muted)]/50">
                 <tr>
                   <th className="px-4 py-3">Producto</th>
                   <th className="px-4 py-3 text-right">Cantidad</th>
@@ -207,7 +207,7 @@ export function DefectuososSection() {
                   <th className="px-4 py-3 text-right" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <tbody className="divide-y divide-[var(--border-subtle)]">
                 {sorted.map((d) => {
                   const p = data.products.find((x) => x.id === d.productId);
                   const reasonLabel =
@@ -240,7 +240,7 @@ export function DefectuososSection() {
                               deleteDefectiveEntry(d.id);
                             }
                           }}
-                          className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                          className="rounded p-1.5 text-[var(--danger)] hover:bg-[var(--danger-soft)]"
                           aria-label="Eliminar"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -252,7 +252,7 @@ export function DefectuososSection() {
               </tbody>
             </table>
             {sorted.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-zinc-500">
+              <p className="px-4 py-8 text-center text-sm text-[var(--foreground-muted)]">
                 No hay registros en este período.
               </p>
             ) : null}
@@ -274,7 +274,7 @@ export function DefectuososSection() {
           />
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full min-w-[520px] text-left text-sm">
-              <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
+              <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs font-semibold uppercase text-[var(--foreground-muted)]/50">
                 <tr>
                   <th className="px-4 py-3">
                     {breakdown === "producto"
@@ -289,7 +289,7 @@ export function DefectuososSection() {
                   <th className="px-4 py-3 text-right">Pérdida</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <tbody className="divide-y divide-[var(--border-subtle)]">
                 {grouped.map((row) => (
                   <tr key={row.key}>
                     <td className="px-4 py-3 font-medium">{row.label}</td>
@@ -304,7 +304,7 @@ export function DefectuososSection() {
               </tbody>
             </table>
             {grouped.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-zinc-500">
+              <p className="px-4 py-8 text-center text-sm text-[var(--foreground-muted)]">
                 No hay datos en este período.
               </p>
             ) : null}
@@ -363,13 +363,13 @@ function DefectiveModal({
               });
             }}
           >
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Producto
               <select
                 required
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -378,7 +378,7 @@ function DefectiveModal({
                 ))}
               </select>
             </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Costo unitario de producción
               <input
                 type="number"
@@ -387,10 +387,10 @@ function DefectiveModal({
                 required
                 value={unitCost || ""}
                 onChange={(e) => setUnitCost(Number(e.target.value) || 0)}
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               />
             </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Cantidad defectuosa
               <input
                 type="number"
@@ -398,17 +398,17 @@ function DefectiveModal({
                 required
                 value={quantity || ""}
                 onChange={(e) => setQuantity(Number(e.target.value) || 1)}
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               />
             </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Motivo
               <select
                 value={reason}
                 onChange={(e) =>
                   setReason(e.target.value as DefectiveReason)
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               >
                 {reasons.map((r) => (
                   <option key={r.value} value={r.value}>
@@ -420,14 +420,14 @@ function DefectiveModal({
             <div className="flex gap-2 pt-2">
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                className="flex-1 rounded-lg bg-[var(--surface-inverted)] py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
               >
                 Guardar
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700"
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
               >
                 Cancelar
               </button>

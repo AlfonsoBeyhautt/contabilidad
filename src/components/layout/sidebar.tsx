@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Boxes,
+  Brain,
   CalendarClock,
   CircleDollarSign,
   History,
@@ -46,6 +47,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Análisis",
     items: [
+      { href: "/inteligencia", label: "Inteligencia del negocio", icon: Brain },
       { href: "/reportes", label: "Reportes", icon: BarChart3 },
       { href: "/configuracion", label: "Configuración", icon: Settings },
     ],

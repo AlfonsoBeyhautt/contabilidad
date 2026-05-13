@@ -18,12 +18,12 @@ const KIND_META: Record<
 > = {
   compra: {
     label: "Compra",
-    tone: "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200",
+    tone: "bg-[var(--success-soft)] text-[var(--success)]",
     affectsStock: true,
   },
   compra_revert: {
     label: "Compra revertida",
-    tone: "bg-emerald-100/60 text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300",
+    tone: "bg-[var(--success-soft)]/60 text-[var(--success)]",
     affectsStock: true,
   },
   venta: {
@@ -38,12 +38,12 @@ const KIND_META: Record<
   },
   defectuoso: {
     label: "Defectuoso",
-    tone: "bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
+    tone: "bg-[var(--warning-soft)] text-[var(--warning)]",
     affectsStock: false,
   },
   ajuste_manual: {
     label: "Ajuste manual",
-    tone: "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100",
+    tone: "bg-[var(--surface-muted)] text-[var(--foreground)]",
     affectsStock: true,
   },
   alta_producto: {
@@ -53,7 +53,7 @@ const KIND_META: Record<
   },
   cascade_borrado: {
     label: "Borrado en cascada",
-    tone: "bg-red-50 text-red-900 dark:bg-red-950/40 dark:text-red-200",
+    tone: "bg-[var(--danger-soft)] text-[var(--danger)]",
     affectsStock: true,
   },
 };
@@ -223,20 +223,20 @@ export function HistorialView() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--foreground-muted)]">
             Movimientos filtrados
           </p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">
             {summary.total}
           </p>
         </div>
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 dark:border-emerald-900 dark:bg-emerald-950/40">
-          <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+        <div className="rounded-xl border border-[color-mix(in_oklab,var(--success)_25%,transparent)] bg-[var(--success-soft)] px-5 py-4">
+          <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--success)]">
             <ArrowDownToLine className="h-3 w-3" aria-hidden />
             Ingresos
           </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-950 dark:text-emerald-100">
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--success)]">
             +{summary.ingresos}
           </p>
         </div>
@@ -249,11 +249,11 @@ export function HistorialView() {
             −{summary.egresos}
           </p>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 dark:border-amber-900 dark:bg-amber-950/40">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+        <div className="rounded-xl border border-[color-mix(in_oklab,var(--warning)_25%,transparent)] bg-[var(--warning-soft)] px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--warning)]">
             Defectuosos (informativo)
           </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-amber-950 dark:text-amber-100">
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--warning)]">
             {summary.defectivos}
           </p>
         </div>
@@ -268,7 +268,7 @@ export function HistorialView() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                className="rounded-md border border-[var(--border-strong)] px-3 py-1.5 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
               >
                 Limpiar
               </button>
@@ -276,7 +276,7 @@ export function HistorialView() {
                 type="button"
                 onClick={handleExport}
                 disabled={filtered.length === 0}
-                className="inline-flex items-center gap-1.5 rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface-inverted)] px-3 py-1.5 text-xs font-medium text-[var(--foreground-on-inverted)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden />
                 Exportar CSV
@@ -287,7 +287,7 @@ export function HistorialView() {
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="flex flex-col gap-1 text-xs">
-              <span className="font-medium text-zinc-600 dark:text-zinc-400">
+              <span className="font-medium text-[var(--foreground-muted)]">
                 Familia
               </span>
               <select
@@ -297,7 +297,7 @@ export function HistorialView() {
                   setProductId("todos");
                   setSizeKey("todos");
                 }}
-                className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 py-1.5 text-sm"
               >
                 <option value="todas">Todas las familias</option>
                 {data.productFamilies
@@ -311,7 +311,7 @@ export function HistorialView() {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="font-medium text-zinc-600 dark:text-zinc-400">
+              <span className="font-medium text-[var(--foreground-muted)]">
                 Producto / modelo
               </span>
               <select
@@ -320,7 +320,7 @@ export function HistorialView() {
                   setProductId(e.target.value);
                   setSizeKey("todos");
                 }}
-                className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 py-1.5 text-sm"
               >
                 <option value="todos">Todos los productos</option>
                 {productOptions.map((p) => (
@@ -331,13 +331,13 @@ export function HistorialView() {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="font-medium text-zinc-600 dark:text-zinc-400">
+              <span className="font-medium text-[var(--foreground-muted)]">
                 Talle
               </span>
               <select
                 value={sizeKey}
                 onChange={(e) => setSizeKey(e.target.value)}
-                className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 py-1.5 text-sm"
               >
                 <option value="todos">Todos los talles</option>
                 {sizeOptions.map((s) => (
@@ -348,13 +348,13 @@ export function HistorialView() {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="font-medium text-zinc-600 dark:text-zinc-400">
+              <span className="font-medium text-[var(--foreground-muted)]">
                 Tipo de movimiento
               </span>
               <select
                 value={kind}
                 onChange={(e) => setKind(e.target.value as typeof kind)}
-                className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 py-1.5 text-sm"
               >
                 {KIND_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -364,29 +364,29 @@ export function HistorialView() {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="font-medium text-zinc-600 dark:text-zinc-400">
+              <span className="font-medium text-[var(--foreground-muted)]">
                 Desde
               </span>
               <input
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 py-1.5 text-sm"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="font-medium text-zinc-600 dark:text-zinc-400">
+              <span className="font-medium text-[var(--foreground-muted)]">
                 Hasta
               </span>
               <input
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 py-1.5 text-sm"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs sm:col-span-2">
-              <span className="font-medium text-zinc-600 dark:text-zinc-400">
+              <span className="font-medium text-[var(--foreground-muted)]">
                 Buscar (producto, nota, referencia)
               </span>
               <input
@@ -394,7 +394,7 @@ export function HistorialView() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Ej: Remera Negra, edición, agujero…"
-                className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 py-1.5 text-sm"
               />
             </label>
           </div>
@@ -412,13 +412,13 @@ export function HistorialView() {
         />
         <CardContent className="overflow-x-auto p-0">
           {filtered.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-zinc-500">
+            <p className="px-5 py-8 text-center text-sm text-[var(--foreground-muted)]">
               Probá ajustar los filtros, ampliar el rango de fechas, o registrar
               ventas, compras y ajustes para poblar el historial.
             </p>
           ) : (
             <table className="w-full min-w-[920px] text-left text-sm">
-              <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50">
+              <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs font-semibold uppercase text-[var(--foreground-muted)]/50">
                 <tr>
                   <th className="px-4 py-3">Fecha</th>
                   <th className="px-4 py-3">Producto</th>
@@ -429,7 +429,7 @@ export function HistorialView() {
                   <th className="px-4 py-3">Detalle</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <tbody className="divide-y divide-[var(--border-subtle)]">
                 {filtered.map((m) => (
                   <MovementRow
                     key={m.id}
@@ -458,23 +458,23 @@ function MovementRow({
 }) {
   const meta = KIND_META[movement.kind] ?? {
     label: movement.kind,
-    tone: "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100",
+    tone: "bg-[var(--surface-muted)] text-[var(--foreground)]",
     affectsStock: true,
   };
   const deltaClass =
     movement.delta > 0
-      ? "text-emerald-700 dark:text-emerald-300"
+      ? "text-[var(--success)]"
       : movement.delta < 0
-        ? "text-red-700 dark:text-red-300"
-        : "text-zinc-500";
+        ? "text-[var(--danger)]"
+        : "text-[var(--foreground-muted)]";
   const sign = movement.delta > 0 ? "+" : "";
   return (
     <tr>
-      <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-zinc-600 dark:text-zinc-400">
+      <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-[var(--foreground-muted)]">
         {formatDateTime(movement.createdAt)}
       </td>
       <td className="px-4 py-3 font-medium">{productName}</td>
-      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+      <td className="px-4 py-3 text-[var(--foreground-muted)]">
         {sizeLabel(movement.sizeKey)}
       </td>
       <td className="px-4 py-3">
@@ -498,17 +498,17 @@ function MovementRow({
         {sign}
         {movement.delta}
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-zinc-700 dark:text-zinc-200">
+      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-[var(--foreground)]">
         {movement.stockAfter}
       </td>
-      <td className="px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">
+      <td className="px-4 py-3 text-xs text-[var(--foreground-muted)]">
         {movement.note ? (
           <span className="block max-w-[220px] truncate" title={movement.note}>
             {movement.note}
           </span>
         ) : null}
         {movement.refKind && movement.refId ? (
-          <span className="block font-mono text-[10px] text-zinc-400">
+          <span className="block font-mono text-[10px] text-[var(--foreground-subtle)]">
             {movement.refKind}: {movement.refId.slice(0, 8)}…
           </span>
         ) : null}

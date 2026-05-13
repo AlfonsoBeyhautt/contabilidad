@@ -124,7 +124,7 @@ export function ReportesView() {
   return (
     <div className="space-y-6">
       {!hasShopName ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+        <div className="rounded-xl border border-[color-mix(in_oklab,var(--warning)_25%,transparent)] bg-[var(--warning-soft)] p-4 text-sm text-[var(--warning)]">
           Para que los reportes se vean profesionales, agregá el{" "}
           <strong>nombre comercial</strong> y un{" "}
           <strong>logo</strong> en{" "}
@@ -134,7 +134,7 @@ export function ReportesView() {
           .
         </div>
       ) : !hasLogo ? (
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--foreground)]">
           Tip: subí un <strong>logo</strong> en{" "}
           <a className="underline" href="/configuracion">
             Configuración
@@ -157,8 +157,8 @@ export function ReportesView() {
                 onClick={() => setPeriodPreset(p)}
                 className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                   periodPreset === p
-                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
-                    : "border-zinc-200 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    ? "border-[var(--surface-inverted)] bg-[var(--surface-inverted)] text-[var(--foreground-on-inverted)]"
+                    : "border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
                 }`}
               >
                 {PRESET_LABELS[p]}
@@ -167,29 +167,29 @@ export function ReportesView() {
           </div>
           {periodPreset === "personalizado" ? (
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Desde
                 <input
                   type="date"
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
                 />
               </label>
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Hasta
                 <input
                   type="date"
                   value={customEnd}
                   onChange={(e) => setCustomEnd(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
                 />
               </label>
             </div>
           ) : null}
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-[var(--foreground-muted)]">
             Período actual:{" "}
-            <strong className="text-zinc-700 dark:text-zinc-300">
+            <strong className="text-[var(--foreground)]">
               {periodLabelText}
             </strong>
           </p>
@@ -197,7 +197,7 @@ export function ReportesView() {
       </Card>
 
       <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--foreground-muted)]">
           Descargas — período seleccionado
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -226,7 +226,7 @@ export function ReportesView() {
       </div>
 
       <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--foreground-muted)]">
           Descargas independientes
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -244,28 +244,28 @@ export function ReportesView() {
               title="Reporte mensual"
               subtitle="Resumen ejecutivo del mes con comparativo interanual"
               action={
-                <span className="inline-flex items-center justify-center rounded-lg bg-amber-100 p-1.5 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200">
+                <span className="inline-flex items-center justify-center rounded-lg bg-[var(--warning-soft)] p-1.5 text-[var(--warning)]">
                   <FileBarChart className="h-4 w-4" aria-hidden />
                 </span>
               }
             />
             <CardContent className="flex flex-1 flex-col justify-between gap-3 text-sm">
               <div className="grid grid-cols-2 gap-2">
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                <label className="text-xs font-medium text-[var(--foreground-muted)]">
                   Año
                   <input
                     type="number"
                     value={monthlyYear}
                     onChange={(e) => setMonthlyYear(Number(e.target.value))}
-                    className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                    className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-1.5 text-sm"
                   />
                 </label>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                <label className="text-xs font-medium text-[var(--foreground-muted)]">
                   Mes
                   <select
                     value={monthlyMonth}
                     onChange={(e) => setMonthlyMonth(Number(e.target.value))}
-                    className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                    className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-1.5 text-sm"
                   >
                     {MONTHS_ES.map((m, i) => (
                       <option key={m} value={i + 1}>
@@ -278,7 +278,7 @@ export function ReportesView() {
               <button
                 type="button"
                 onClick={downloadMonthly}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--surface-inverted)] px-3 py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
               >
                 <Download className="h-4 w-4" aria-hidden />
                 Descargar PDF
@@ -297,19 +297,19 @@ export function ReportesView() {
               }
             />
             <CardContent className="flex flex-1 flex-col justify-between gap-3 text-sm">
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              <label className="text-xs font-medium text-[var(--foreground-muted)]">
                 Año del ejercicio
                 <input
                   type="number"
                   value={annualYear}
                   onChange={(e) => setAnnualYear(Number(e.target.value))}
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-1.5 text-sm"
                 />
               </label>
               <button
                 type="button"
                 onClick={downloadAnnual}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--surface-inverted)] px-3 py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
               >
                 <Download className="h-4 w-4" aria-hidden />
                 Descargar PDF
@@ -326,30 +326,30 @@ export function ReportesView() {
         />
         <CardContent>
           <div className="grid gap-4 text-sm sm:grid-cols-3">
-            <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+            <div className="rounded-lg border border-[var(--border)] p-4">
               <div className="mb-2 flex items-center gap-2">
-                <FileText className="h-4 w-4 text-zinc-500" aria-hidden />
+                <FileText className="h-4 w-4 text-[var(--foreground-muted)]" aria-hidden />
                 <p className="font-medium">Letterhead</p>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[var(--foreground-muted)]">
                 Logo + nombre del negocio + período + fecha de emisión.
               </p>
             </div>
-            <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+            <div className="rounded-lg border border-[var(--border)] p-4">
               <div className="mb-2 flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-zinc-500" aria-hidden />
+                <BarChart3 className="h-4 w-4 text-[var(--foreground-muted)]" aria-hidden />
                 <p className="font-medium">KPIs + gráficos</p>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[var(--foreground-muted)]">
                 Tarjetas de métricas, barras, líneas y donut vectoriales.
               </p>
             </div>
-            <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+            <div className="rounded-lg border border-[var(--border)] p-4">
               <div className="mb-2 flex items-center gap-2">
-                <CalendarRange className="h-4 w-4 text-zinc-500" aria-hidden />
+                <CalendarRange className="h-4 w-4 text-[var(--foreground-muted)]" aria-hidden />
                 <p className="font-medium">Conclusiones</p>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[var(--foreground-muted)]">
                 Cada reporte cierra con bullets ejecutivos accionables.
               </p>
             </div>
@@ -379,8 +379,8 @@ function ReportCard({
 }) {
   const toneClasses: Record<typeof iconTone, string> = {
     emerald:
-      "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200",
-    zinc: "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200",
+      "bg-[var(--success-soft)] text-[var(--success)]",
+    zinc: "bg-[var(--surface-muted)] text-[var(--foreground)]",
     violet:
       "bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-200",
     blue: "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-200",
@@ -400,14 +400,14 @@ function ReportCard({
       />
       <CardContent className="flex flex-1 flex-col justify-between gap-3">
         {note ? (
-          <p className="text-xs text-zinc-500">{note}</p>
+          <p className="text-xs text-[var(--foreground-muted)]">{note}</p>
         ) : (
           <div />
         )}
         <button
           type="button"
           onClick={onDownload}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--surface-inverted)] px-3 py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
         >
           <Download className="h-4 w-4" aria-hidden />
           Descargar PDF

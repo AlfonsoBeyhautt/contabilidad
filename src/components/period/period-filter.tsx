@@ -2,6 +2,7 @@
 
 import { usePeriod } from "@/contexts/period-context";
 import type { PeriodPreset } from "@/lib/data/finance-calcs";
+import { Input, Select } from "@/components/ui/field";
 
 const labels: Record<PeriodPreset, string> = {
   hoy: "Hoy",
@@ -18,25 +19,25 @@ export function PeriodFilter() {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--foreground-subtle)]">
         Período
       </span>
-      <select
+      <Select
         value={preset}
         onChange={(e) => setPreset(e.target.value as PeriodPreset)}
-        className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 shadow-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+        className="min-w-[150px]"
       >
         {(Object.keys(labels) as PeriodPreset[]).map((k) => (
           <option key={k} value={k}>
             {labels[k]}
           </option>
         ))}
-      </select>
+      </Select>
       {preset === "personalizado" ? (
         <div className="flex flex-wrap items-center gap-2">
-          <input
+          <Input
             type="date"
-            className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-[140px]"
             defaultValue={
               customStart
                 ? customStart.toISOString().slice(0, 10)
@@ -50,10 +51,10 @@ export function PeriodFilter() {
               setCustomRange(start, end);
             }}
           />
-          <span className="text-zinc-400">—</span>
-          <input
+          <span className="text-[var(--foreground-subtle)]">—</span>
+          <Input
             type="date"
-            className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="w-[140px]"
             defaultValue={
               customEnd ? customEnd.toISOString().slice(0, 10) : undefined
             }

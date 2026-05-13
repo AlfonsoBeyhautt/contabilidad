@@ -112,7 +112,7 @@ export function ProductosView() {
   return (
     <div className="space-y-6">
       {showCostosHint ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-50">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color-mix(in_oklab,var(--success)_25%,transparent)] bg-[var(--success-soft)]/90 px-4 py-3 text-sm text-[var(--success)]">
           <p>
             Podés cargar stock de esta prenda en{" "}
             <Link
@@ -125,7 +125,7 @@ export function ProductosView() {
           </p>
           <button
             type="button"
-            className="shrink-0 text-xs font-medium text-emerald-800 underline dark:text-emerald-200"
+            className="shrink-0 text-xs font-medium text-[var(--success)] underline"
             onClick={() => setShowCostosHint(false)}
           >
             Ocultar
@@ -134,7 +134,7 @@ export function ProductosView() {
       ) : null}
       <div className="flex flex-wrap items-center justify-end gap-3">
         <div className="mr-auto flex flex-wrap gap-2 text-xs">
-          <span className="self-center text-zinc-500">Stock:</span>
+          <span className="self-center text-[var(--foreground-muted)]">Stock:</span>
           {(
             [
               ["all", "Todos"],
@@ -148,8 +148,8 @@ export function ProductosView() {
               onClick={() => setFilter(key)}
               className={`rounded-full px-3 py-1 font-medium ${
                 filter === key
-                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                  : "border border-zinc-200 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950"
+                  ? "bg-[var(--surface-inverted)] text-[var(--foreground-on-inverted)]"
+                  : "border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground-muted)]"
               }`}
             >
               {label}
@@ -165,11 +165,11 @@ export function ProductosView() {
               setEditingFamily(null);
               setAddingVariantFor(null);
             }}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className="rounded-lg bg-[var(--surface-inverted)] px-4 py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
           >
             Nuevo producto
           </button>
-          <p className="max-w-xs text-right text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+          <p className="max-w-xs text-right text-[11px] leading-snug text-[var(--foreground-muted)]">
             Usar solo para crear un producto por primera vez (familia + variantes).
           </p>
         </div>
@@ -180,31 +180,31 @@ export function ProductosView() {
         <CardContent className="overflow-x-auto p-0">
           <div className="space-y-3 p-3 md:hidden">
             {grouped.length === 0 ? (
-              <p className="rounded-lg border border-zinc-200 px-3 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
+              <p className="rounded-lg border border-[var(--border)] px-3 py-6 text-center text-sm text-[var(--foreground-muted)]">
                 {filter === "all" ? "No hay productos cargados." : "Nada coincide con este filtro."}
               </p>
             ) : (
               grouped.map(({ family, variants, allVariants }) => (
-                <div key={family.id} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+                <div key={family.id} className="rounded-lg border border-[var(--border)] p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-semibold">{family.name}</p>
-                      <p className="text-xs text-zinc-500">{family.category} · Ingreso {formatDate(family.entryDate)}</p>
+                      <p className="text-xs text-[var(--foreground-muted)]">{family.category} · Ingreso {formatDate(family.entryDate)}</p>
                     </div>
-                    <p className="text-xs text-zinc-500">{allVariants.length} variante{allVariants.length === 1 ? "" : "s"}</p>
+                    <p className="text-xs text-[var(--foreground-muted)]">{allVariants.length} variante{allVariants.length === 1 ? "" : "s"}</p>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     <button
                       type="button"
                       onClick={() => setEditingFamily(family)}
-                      className="rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                      className="rounded px-2 py-1 text-xs text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
                     >
                       Editar prenda
                     </button>
                     <button
                       type="button"
                       onClick={() => setAddingVariantFor(family.id)}
-                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-200 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
                     >
                       <Plus className="h-3 w-3" />
                       Variante
@@ -220,7 +220,7 @@ export function ProductosView() {
                           deleteProductFamily(family.id);
                         }
                       }}
-                      className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                      className="rounded px-2 py-1 text-xs text-[var(--danger)] hover:bg-[var(--danger-soft)]"
                     >
                       Eliminar
                     </button>
@@ -229,45 +229,45 @@ export function ProductosView() {
                     {variants.map((p) => {
                       const st = stockStatus(p);
                       return (
-                        <div key={p.id} className="rounded-md border border-zinc-200 p-2 dark:border-zinc-700">
+                        <div key={p.id} className="rounded-md border border-[var(--border)] p-2">
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-medium">{p.model || "Sin modelo"}</p>
                             <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
                               st === "agotado"
-                                ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+                                ? "bg-[var(--danger-soft)] text-[var(--danger)]"
                                 : st === "bajo"
-                                  ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
-                                  : "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
+                                  ? "bg-[var(--warning-soft)] text-[var(--warning)]"
+                                  : "bg-[var(--success-soft)] text-[var(--success)]"
                             }`}>
                               {st === "agotado" ? "Agotado" : st === "bajo" ? "Bajo" : "OK"}
                             </span>
                           </div>
-                          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{formatStockBySizeSummary(p)}</p>
+                          <p className="mt-1 text-xs text-[var(--foreground-muted)]">{formatStockBySizeSummary(p)}</p>
                           <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                            <p><span className="text-zinc-500">Costo:</span> <span className="font-medium tabular-nums">{formatCurrency(p.purchaseCost)}</span></p>
-                            <p><span className="text-zinc-500">Precio:</span> <span className="font-medium tabular-nums">{formatCurrency(p.salePrice)}</span></p>
-                            <p><span className="text-zinc-500">Stock:</span> <span className="font-medium tabular-nums">{p.stock}</span></p>
-                            <p><span className="text-zinc-500">Mín.:</span> <span className="font-medium tabular-nums">{p.minStock}</span></p>
+                            <p><span className="text-[var(--foreground-muted)]">Costo:</span> <span className="font-medium tabular-nums">{formatCurrency(p.purchaseCost)}</span></p>
+                            <p><span className="text-[var(--foreground-muted)]">Precio:</span> <span className="font-medium tabular-nums">{formatCurrency(p.salePrice)}</span></p>
+                            <p><span className="text-[var(--foreground-muted)]">Stock:</span> <span className="font-medium tabular-nums">{p.stock}</span></p>
+                            <p><span className="text-[var(--foreground-muted)]">Mín.:</span> <span className="font-medium tabular-nums">{p.minStock}</span></p>
                           </div>
                           <div className="mt-2 flex flex-wrap justify-end gap-1">
                             <button
                               type="button"
                               onClick={() => adjustStock(p.id, 1)}
-                              className="rounded border border-zinc-200 px-2 py-0.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                              className="rounded border border-[var(--border)] px-2 py-0.5 text-xs font-medium hover:bg-[var(--surface-muted)]"
                             >
                               +1
                             </button>
                             <button
                               type="button"
                               onClick={() => adjustStock(p.id, -1)}
-                              className="rounded border border-zinc-200 px-2 py-0.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                              className="rounded border border-[var(--border)] px-2 py-0.5 text-xs font-medium hover:bg-[var(--surface-muted)]"
                             >
                               −1
                             </button>
                             <button
                               type="button"
                               onClick={() => setEditingVariant(p)}
-                              className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                              className="rounded p-1.5 text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
                               aria-label="Editar variante"
                             >
                               <Pencil className="h-4 w-4" />
@@ -283,7 +283,7 @@ export function ProductosView() {
                                   deleteProduct(p.id);
                                 }
                               }}
-                              className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"
+                              className="rounded p-1.5 text-[var(--danger)] hover:bg-[var(--danger-soft)]"
                               aria-label="Eliminar variante"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -298,7 +298,7 @@ export function ProductosView() {
             )}
           </div>
           <table className="hidden w-full min-w-[880px] text-left text-sm md:table">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs font-semibold uppercase text-[var(--foreground-muted)]/50">
               <tr>
                 <th className="w-10 px-2 py-3" />
                 <th className="px-4 py-3">Prenda</th>
@@ -312,12 +312,12 @@ export function ProductosView() {
                 <th className="px-4 py-3 w-40" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-[var(--border-subtle)]">
               {grouped.length === 0 ? (
                 <tr>
                   <td
                     colSpan={10}
-                    className="px-4 py-10 text-center text-zinc-500"
+                    className="px-4 py-10 text-center text-[var(--foreground-muted)]"
                   >
                     {filter === "all"
                       ? "No hay productos cargados."
@@ -329,12 +329,12 @@ export function ProductosView() {
                   const open = isOpen(family.id);
                   return (
                     <Fragment key={family.id}>
-                      <tr className="bg-zinc-100/90 dark:bg-zinc-900/80">
+                      <tr className="bg-[var(--surface-muted)]/80">
                         <td className="px-2 py-2">
                           <button
                             type="button"
                             onClick={() => toggle(family.id)}
-                            className="rounded p-1 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                            className="rounded p-1 text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
                             aria-expanded={open}
                             aria-label={open ? "Contraer" : "Expandir"}
                           >
@@ -347,14 +347,14 @@ export function ProductosView() {
                         </td>
                         <td className="px-4 py-2 font-semibold" colSpan={2}>
                           {family.name}
-                          <span className="ml-2 font-normal text-zinc-500">
+                          <span className="ml-2 font-normal text-[var(--foreground-muted)]">
                             · {family.category}
                           </span>
                         </td>
-                        <td className="px-4 py-2 text-xs text-zinc-500" colSpan={3}>
+                        <td className="px-4 py-2 text-xs text-[var(--foreground-muted)]" colSpan={3}>
                           Ingreso {formatDate(family.entryDate)}
                         </td>
-                        <td className="px-4 py-2 text-right text-xs text-zinc-500" colSpan={2}>
+                        <td className="px-4 py-2 text-right text-xs text-[var(--foreground-muted)]" colSpan={2}>
                           {allVariants.length} variante
                           {allVariants.length === 1 ? "" : "s"}
                         </td>
@@ -363,14 +363,14 @@ export function ProductosView() {
                             <button
                               type="button"
                               onClick={() => setEditingFamily(family)}
-                              className="rounded px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                              className="rounded px-2 py-1 text-xs text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
                             >
                               Editar prenda
                             </button>
                             <button
                               type="button"
                               onClick={() => setAddingVariantFor(family.id)}
-                              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-200 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
                             >
                               <Plus className="h-3 w-3" />
                               Variante
@@ -386,7 +386,7 @@ export function ProductosView() {
                                   deleteProductFamily(family.id);
                                 }
                               }}
-                              className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                              className="rounded px-2 py-1 text-xs text-[var(--danger)] hover:bg-[var(--danger-soft)]"
                             >
                               Eliminar
                             </button>
@@ -398,19 +398,19 @@ export function ProductosView() {
                             const st = stockStatus(p);
                             const rowClass =
                               st === "agotado"
-                                ? "bg-red-50/50 dark:bg-red-950/20"
+                                ? "bg-[var(--danger-soft)]/50"
                                 : st === "bajo"
-                                  ? "bg-amber-50/40 dark:bg-amber-950/15"
+                                  ? "bg-[var(--warning-soft)]/40"
                                   : "";
                             return (
                               <tr
                                 key={p.id}
-                                className={`hover:bg-zinc-50/80 dark:hover:bg-zinc-900/40 ${rowClass}`}
+                                className={`hover:bg-[var(--surface-muted)]/80/40 ${rowClass}`}
                               >
                                 <td />
-                                <td className="px-4 py-2.5 text-zinc-400">—</td>
+                                <td className="px-4 py-2.5 text-[var(--foreground-subtle)]">—</td>
                                 <td className="px-4 py-2.5">{p.model || "—"}</td>
-                                <td className="max-w-[220px] px-4 py-2.5 text-xs text-zinc-600 dark:text-zinc-400">
+                                <td className="max-w-[220px] px-4 py-2.5 text-xs text-[var(--foreground-muted)]">
                                   {formatStockBySizeSummary(p)}
                                 </td>
                                 <td className="px-4 py-2.5 text-right tabular-nums">
@@ -422,17 +422,17 @@ export function ProductosView() {
                                 <td className="px-4 py-2.5 text-right tabular-nums font-medium">
                                   {p.stock}
                                 </td>
-                                <td className="px-4 py-2.5 text-right tabular-nums text-zinc-500">
+                                <td className="px-4 py-2.5 text-right tabular-nums text-[var(--foreground-muted)]">
                                   {p.minStock}
                                 </td>
                                 <td className="px-4 py-2.5">
                                   <span
                                     className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                                       st === "agotado"
-                                        ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+                                        ? "bg-[var(--danger-soft)] text-[var(--danger)]"
                                         : st === "bajo"
-                                          ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
-                                          : "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
+                                          ? "bg-[var(--warning-soft)] text-[var(--warning)]"
+                                          : "bg-[var(--success-soft)] text-[var(--success)]"
                                     }`}
                                   >
                                     {st === "agotado"
@@ -447,21 +447,21 @@ export function ProductosView() {
                                     <button
                                       type="button"
                                       onClick={() => adjustStock(p.id, 1)}
-                                      className="rounded border border-zinc-200 px-2 py-0.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                                      className="rounded border border-[var(--border)] px-2 py-0.5 text-xs font-medium hover:bg-[var(--surface-muted)]"
                                     >
                                       +1
                                     </button>
                                     <button
                                       type="button"
                                       onClick={() => adjustStock(p.id, -1)}
-                                      className="rounded border border-zinc-200 px-2 py-0.5 text-xs font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                                      className="rounded border border-[var(--border)] px-2 py-0.5 text-xs font-medium hover:bg-[var(--surface-muted)]"
                                     >
                                       −1
                                     </button>
                                     <button
                                       type="button"
                                       onClick={() => setEditingVariant(p)}
-                                      className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                                      className="rounded p-1.5 text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)]"
                                       aria-label="Editar variante"
                                     >
                                       <Pencil className="h-4 w-4" />
@@ -477,7 +477,7 @@ export function ProductosView() {
                                           deleteProduct(p.id);
                                         }
                                       }}
-                                      className="rounded p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"
+                                      className="rounded p-1.5 text-[var(--danger)] hover:bg-[var(--danger-soft)]"
                                       aria-label="Eliminar variante"
                                     >
                                       <Trash2 className="h-4 w-4" />
@@ -645,13 +645,13 @@ function CreateFamilyModal({
               });
             }}
           >
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--foreground-muted)]">
               Nombre de la prenda
               <input
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 placeholder="Ej. Buzo de lana"
               />
             </label>
@@ -663,7 +663,7 @@ function CreateFamilyModal({
                   onChange={(e) =>
                     setCategory(e.target.value as ProductCategory)
                   }
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 >
                   {categories.map((c) => (
                     <option key={c} value={c}>
@@ -679,20 +679,20 @@ function CreateFamilyModal({
                   required
                   value={entryDate}
                   onChange={(e) => setEntryDate(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
                 />
               </label>
             </div>
 
-            <div className="border-t border-zinc-100 pt-3 dark:border-zinc-800">
+            <div className="border-t border-[var(--border-subtle)] pt-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                <p className="text-xs font-semibold text-[var(--foreground)]">
                   Variantes
                 </p>
                 <button
                   type="button"
                   onClick={addRow}
-                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-2 py-1 text-xs font-medium dark:border-zinc-700"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-2 py-1 text-xs font-medium"
                 >
                   <Plus className="h-3 w-3" />
                   Agregar variante
@@ -702,14 +702,14 @@ function CreateFamilyModal({
                 {variants.map((row, i) => (
                   <div
                     key={i}
-                    className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+                    className="rounded-lg border border-[var(--border)] p-3"
                   >
                     <div className="mb-2 flex justify-end">
                       {variants.length > 1 ? (
                         <button
                           type="button"
                           onClick={() => removeRow(i)}
-                          className="text-xs text-red-600 hover:underline"
+                          className="text-xs text-[var(--danger)] hover:underline"
                         >
                           Quitar
                         </button>
@@ -722,15 +722,15 @@ function CreateFamilyModal({
                         onChange={(v) => updateRow(i, { model: v })}
                         className="block"
                       />
-                      <div className="rounded-md border border-zinc-100 p-2 dark:border-zinc-800">
+                      <div className="rounded-md border border-[var(--border-subtle)] p-2">
                         <div className="mb-1 flex items-center justify-between">
-                          <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
+                          <span className="text-[11px] font-medium text-[var(--foreground-muted)]">
                             Talles y stock
                           </span>
                           <button
                             type="button"
                             onClick={() => addSizeRow(i)}
-                            className="text-[11px] text-zinc-600 underline dark:text-zinc-400"
+                            className="text-[11px] text-[var(--foreground-muted)] underline"
                           >
                             + Talle
                           </button>
@@ -762,7 +762,7 @@ function CreateFamilyModal({
                                 <button
                                   type="button"
                                   onClick={() => removeSizeRow(i, si)}
-                                  className="mb-0.5 text-[11px] text-red-600"
+                                  className="mb-0.5 text-[11px] text-[var(--danger)]"
                                 >
                                   Quitar
                                 </button>
@@ -806,14 +806,14 @@ function CreateFamilyModal({
             <div className="flex gap-2 pt-2">
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                className="flex-1 rounded-lg bg-[var(--surface-inverted)] py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
               >
                 Guardar
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700"
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
               >
                 Cancelar
               </button>
@@ -887,15 +887,15 @@ function EditVariantModal({
               value={form.model}
               onChange={(v) => setForm((f) => ({ ...f, model: v }))}
             />
-            <div className="rounded-md border border-zinc-100 p-2 dark:border-zinc-800">
+            <div className="rounded-md border border-[var(--border-subtle)] p-2">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
+                <span className="text-[11px] font-medium text-[var(--foreground-muted)]">
                   Talles y stock
                 </span>
                 <button
                   type="button"
                   onClick={addSizeRow}
-                  className="text-[11px] text-zinc-600 underline dark:text-zinc-400"
+                  className="text-[11px] text-[var(--foreground-muted)] underline"
                 >
                   + Talle
                 </button>
@@ -939,7 +939,7 @@ function EditVariantModal({
                       <button
                         type="button"
                         onClick={() => removeSizeRow(i)}
-                        className="mb-0.5 text-[11px] text-red-600"
+                        className="mb-0.5 text-[11px] text-[var(--danger)]"
                       >
                         Quitar
                       </button>
@@ -983,14 +983,14 @@ function EditVariantModal({
             <div className="flex gap-2 pt-1">
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                className="flex-1 rounded-lg bg-[var(--surface-inverted)] py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
               >
                 Guardar
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700"
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
               >
                 Cancelar
               </button>
@@ -1044,7 +1044,7 @@ function EditFamilyModal({
                 onChange={(e) =>
                   setCategory(e.target.value as ProductCategory)
                 }
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
               >
                 {categories.map((c) => (
                   <option key={c} value={c}>
@@ -1062,14 +1062,14 @@ function EditFamilyModal({
             <div className="flex gap-2 pt-2">
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                className="flex-1 rounded-lg bg-[var(--surface-inverted)] py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
               >
                 Guardar
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700"
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
               >
                 Cancelar
               </button>
@@ -1131,15 +1131,15 @@ function AddVariantModal({
               value={form.model}
               onChange={(v) => setForm((f) => ({ ...f, model: v }))}
             />
-            <div className="rounded-md border border-zinc-100 p-2 dark:border-zinc-800">
+            <div className="rounded-md border border-[var(--border-subtle)] p-2">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
+                <span className="text-[11px] font-medium text-[var(--foreground-muted)]">
                   Talles y stock
                 </span>
                 <button
                   type="button"
                   onClick={addSizeRow}
-                  className="text-[11px] text-zinc-600 underline dark:text-zinc-400"
+                  className="text-[11px] text-[var(--foreground-muted)] underline"
                 >
                   + Talle
                 </button>
@@ -1183,7 +1183,7 @@ function AddVariantModal({
                       <button
                         type="button"
                         onClick={() => removeSizeRow(i)}
-                        className="mb-0.5 text-[11px] text-red-600"
+                        className="mb-0.5 text-[11px] text-[var(--danger)]"
                       >
                         Quitar
                       </button>
@@ -1221,14 +1221,14 @@ function AddVariantModal({
             <div className="flex gap-2 pt-1">
               <button
                 type="submit"
-                className="flex-1 rounded-lg bg-zinc-900 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+                className="flex-1 rounded-lg bg-[var(--surface-inverted)] py-2 text-sm font-medium text-[var(--foreground-on-inverted)] hover:opacity-90"
               >
                 Guardar
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700"
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm"
               >
                 Cancelar
               </button>
@@ -1257,7 +1257,7 @@ function Field({
 }) {
   return (
     <label
-      className={`text-xs font-medium text-zinc-600 dark:text-zinc-400 ${className}`}
+      className={`text-xs font-medium text-[var(--foreground-muted)] ${className}`}
     >
       {label}
       <input
@@ -1265,7 +1265,7 @@ function Field({
         required={required}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
       />
     </label>
   );

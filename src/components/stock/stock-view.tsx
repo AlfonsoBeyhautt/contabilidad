@@ -24,27 +24,27 @@ export function StockView() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--foreground-muted)]">
             Valor inventario (al costo)
           </p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">
             {formatCurrency(valuation)}
           </p>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 dark:border-amber-900 dark:bg-amber-950/40">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+        <div className="rounded-xl border border-[color-mix(in_oklab,var(--warning)_25%,transparent)] bg-[var(--warning-soft)] px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--warning)]">
             Alertas stock bajo
           </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-amber-950 dark:text-amber-100">
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--warning)]">
             {low.length}
           </p>
         </div>
-        <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 dark:border-red-900 dark:bg-red-950/40">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-red-800 dark:text-red-200">
+        <div className="rounded-xl border border-[color-mix(in_oklab,var(--danger)_25%,transparent)] bg-[var(--danger-soft)] px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--danger)]">
             Agotados
           </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-red-950 dark:text-red-100">
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--danger)]">
             {out.length}
           </p>
         </div>
@@ -54,7 +54,7 @@ export function StockView() {
         <CardHeader title="Ajustes rápidos de stock" />
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs font-semibold uppercase text-[var(--foreground-muted)]/50">
               <tr>
                 <th className="px-4 py-3">Variante</th>
                 <th className="px-4 py-3 text-right">Stock disp.</th>
@@ -62,12 +62,12 @@ export function StockView() {
                 <th className="px-4 py-3">Ajuste</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-[var(--border-subtle)]">
               {data.products.map((p) => (
                 <tr key={p.id}>
                   <td className="px-4 py-3 font-medium">{p.name}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{p.stock}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-zinc-600">
+                  <td className="px-4 py-3 text-right tabular-nums text-[var(--foreground-muted)]">
                     {formatCurrency(p.stock * p.purchaseCost)}
                   </td>
                   <td className="px-4 py-3">
@@ -75,21 +75,21 @@ export function StockView() {
                       <button
                         type="button"
                         onClick={() => adjustStock(p.id, 1)}
-                        className="rounded bg-zinc-200 px-2 py-1 text-xs dark:bg-zinc-800"
+                        className="rounded bg-[var(--surface-muted)] px-2 py-1 text-xs"
                       >
                         +1
                       </button>
                       <button
                         type="button"
                         onClick={() => adjustStock(p.id, 5)}
-                        className="rounded bg-zinc-200 px-2 py-1 text-xs dark:bg-zinc-800"
+                        className="rounded bg-[var(--surface-muted)] px-2 py-1 text-xs"
                       >
                         +5
                       </button>
                       <button
                         type="button"
                         onClick={() => adjustStock(p.id, -1)}
-                        className="rounded bg-zinc-200 px-2 py-1 text-xs dark:bg-zinc-800"
+                        className="rounded bg-[var(--surface-muted)] px-2 py-1 text-xs"
                       >
                         −1
                       </button>
@@ -110,11 +110,11 @@ export function StockView() {
               {out.map((p) => (
                 <li key={p.id} className="flex justify-between">
                   <span>{p.name}</span>
-                  <span className="text-red-600">0 uds</span>
+                  <span className="text-[var(--danger)]">0 uds</span>
                 </li>
               ))}
               {out.length === 0 ? (
-                <li className="text-zinc-500">Ninguno.</li>
+                <li className="text-[var(--foreground-muted)]">Ninguno.</li>
               ) : null}
             </ul>
           </CardContent>
@@ -126,13 +126,13 @@ export function StockView() {
               {low.map((p) => (
                 <li key={p.id} className="flex justify-between">
                   <span>{p.name}</span>
-                  <span className="text-amber-700 dark:text-amber-400">
+                  <span className="text-[var(--warning)]">
                     {p.stock} / min {p.minStock}
                   </span>
                 </li>
               ))}
               {low.length === 0 ? (
-                <li className="text-zinc-500">Ninguno.</li>
+                <li className="text-[var(--foreground-muted)]">Ninguno.</li>
               ) : null}
             </ul>
           </CardContent>

@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   BarChart3,
+  Brain,
   CalendarClock,
   ChevronRight,
   CircleDollarSign,
@@ -51,6 +52,7 @@ import {
   type DateRange,
 } from "@/lib/data/finance-calcs";
 import { upcomingPayments } from "@/lib/data/calendar-helpers";
+import { buildIntelligenceReport } from "@/lib/intelligence";
 import { formatCurrency, formatPercent } from "@/lib/format";
 
 function pctChange(current: number, previous: number): number {
@@ -146,6 +148,16 @@ export function DashboardView() {
 
   const next7Days = upcomingPayments(data, 7);
   const next7Total = next7Days.reduce((a, it) => a + it.amount, 0);
+
+  const intel = useMemo(
+    () =>
+      buildIntelligenceReport(data, {
+        period: range,
+        periodLabel: presetLabels[preset] ?? "Período seleccionado",
+      }),
+    [data, range, preset],
+  );
+  const topInsight = intel.insights[0];
 
   const totalAlerts = lowStock.length + outStock.length + next7Days.length;
   const periodLabel = periodDescription(preset);
@@ -272,6 +284,46 @@ export function DashboardView() {
             }
           />
         </div>
+      </section>
+
+      {/* ── Acceso a Inteligencia · sutil, no invasivo ─────────────────── */}
+      <section>
+        <Link
+          href="/inteligencia"
+          className="group block rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-shadow hover:shadow-[var(--shadow-sm)] sm:p-6"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 sm:items-center">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
+                <Brain className="h-4 w-4" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--foreground-subtle)]">
+                  Inteligencia del negocio
+                </p>
+                <p className="mt-0.5 text-[14px] font-semibold tracking-tight text-[var(--foreground-strong)]">
+                  Salud del negocio: {intel.health.score} / 100 ·{" "}
+                  <span className="capitalize text-[var(--foreground-muted)]">
+                    {intel.health.grade}
+                  </span>
+                </p>
+                {topInsight ? (
+                  <p className="mt-1 line-clamp-2 max-w-2xl text-[12.5px] leading-relaxed text-[var(--foreground-muted)]">
+                    {topInsight.summary}
+                  </p>
+                ) : (
+                  <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-[var(--foreground-muted)]">
+                    Generá un análisis ejecutivo automático del período actual.
+                  </p>
+                )}
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1 self-start rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)] transition-colors group-hover:bg-[var(--surface-muted)] sm:self-auto">
+              Abrir centro de análisis
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+            </span>
+          </div>
+        </Link>
       </section>
 
       {/* ── Atención prioritaria ────────────────────────────────────────── */}
