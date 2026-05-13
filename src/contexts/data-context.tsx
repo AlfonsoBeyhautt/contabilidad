@@ -65,6 +65,9 @@ import {
   mirrorSaleAsync,
   mirrorSaleDeleteAsync,
   mirrorSaleReplaceAsync,
+  mirrorScheduledPaymentDeleteAsync,
+  mirrorScheduledPaymentInsertAsync,
+  mirrorScheduledPaymentUpdateAsync,
   mirrorSettingsAsync,
   mirrorStockMovementInsertAsync,
   mirrorStockMovementsBulkInsertAsync,
@@ -85,8 +88,10 @@ import type {
   ProductCategory,
   ProductFamily,
   Sale,
+  ScheduledPayment,
   StockMovement,
 } from "@/lib/data/types";
+import { expenseFromScheduledPayment } from "@/lib/data/calendar-helpers";
 
 export type VariantSizeStockInput = { size: string; stock: number };
 
@@ -138,6 +143,16 @@ type DataContextValue = {
     patch: Partial<ExpenseRecurrence>,
   ) => void;
   deleteExpenseRecurrence: (id: string) => void;
+  addScheduledPayment: (input: Omit<ScheduledPayment, "id">) => void;
+  updateScheduledPayment: (
+    id: string,
+    patch: Partial<Omit<ScheduledPayment, "id">>,
+  ) => void;
+  deleteScheduledPayment: (id: string) => void;
+  /** Marca un pago programado como pagado: crea un Expense y lo vincula. */
+  markScheduledPaymentAsPaid: (id: string) => void;
+  /** Revierte el pago: elimina el Expense vinculado y vuelve a pendiente. */
+  markScheduledPaymentAsPending: (id: string) => void;
   addPurchase: (input: Omit<InventoryPurchase, "id">) => void;
   updatePurchase: (id: string, input: Omit<InventoryPurchase, "id">) => void;
   deletePurchase: (id: string) => void;
@@ -790,6 +805,113 @@ export function DataProvider({ children }: { children: ReactNode }) {
     mirrorExpenseRecurrenceDeleteAsync(id);
   }, []);
 
+  const addScheduledPayment = useCallback(
+    (input: Omit<ScheduledPayment, "id">) => {
+      const row: ScheduledPayment = {
+        ...input,
+        id: newId(),
+        paid: input.paid ?? false,
+      };
+      setData((d) => ({
+        ...d,
+        scheduledPayments: [...(d.scheduledPayments ?? []), row],
+      }));
+      mirrorScheduledPaymentInsertAsync(row);
+    },
+    [],
+  );
+
+  const updateScheduledPayment = useCallback(
+    (id: string, patch: Partial<Omit<ScheduledPayment, "id">>) => {
+      setData((d) => {
+        const list = d.scheduledPayments ?? [];
+        let updated: ScheduledPayment | null = null;
+        const next = list.map((sp) => {
+          if (sp.id !== id) return sp;
+          updated = { ...sp, ...patch, id };
+          return updated;
+        });
+        if (updated) mirrorScheduledPaymentUpdateAsync(updated);
+        return { ...d, scheduledPayments: next };
+      });
+    },
+    [],
+  );
+
+  const deleteScheduledPayment = useCallback((id: string) => {
+    setData((d) => {
+      const sp = (d.scheduledPayments ?? []).find((x) => x.id === id);
+      // Si tenía un expense vinculado, no lo borramos automáticamente.
+      // El usuario puede ir a Gastos y borrarlo manualmente si quiere.
+      return {
+        ...d,
+        scheduledPayments: (d.scheduledPayments ?? []).filter((x) => x.id !== id),
+        // Si lo borramos antes de pagarlo, listo.
+        ...(sp ? {} : {}),
+      };
+    });
+    mirrorScheduledPaymentDeleteAsync(id);
+  }, []);
+
+  const markScheduledPaymentAsPaid = useCallback((id: string) => {
+    setData((d) => {
+      const sp = (d.scheduledPayments ?? []).find((x) => x.id === id);
+      if (!sp || sp.paid) return d;
+      const expense: Expense = {
+        ...expenseFromScheduledPayment(sp),
+        id: newId(),
+      };
+      const nextSp: ScheduledPayment = {
+        ...sp,
+        paid: true,
+        paidAt: new Date().toISOString(),
+        paidExpenseId: expense.id,
+      };
+      queueMicrotask(() => {
+        mirrorExpenseAsync(expense);
+        mirrorScheduledPaymentUpdateAsync(nextSp);
+      });
+      return {
+        ...d,
+        expenses: [expense, ...d.expenses],
+        scheduledPayments: (d.scheduledPayments ?? []).map((x) =>
+          x.id === id ? nextSp : x,
+        ),
+      };
+    });
+  }, []);
+
+  const markScheduledPaymentAsPending = useCallback((id: string) => {
+    setData((d) => {
+      const sp = (d.scheduledPayments ?? []).find((x) => x.id === id);
+      if (!sp || !sp.paid) return d;
+      const linkedExpenseId = sp.paidExpenseId ?? null;
+      const nextSp: ScheduledPayment = {
+        ...sp,
+        paid: false,
+        paidAt: undefined,
+        paidExpenseId: null,
+      };
+      let expenses = d.expenses;
+      if (linkedExpenseId) {
+        expenses = d.expenses.filter((e) => e.id !== linkedExpenseId);
+        queueMicrotask(() => {
+          mirrorExpenseDeleteAsync(linkedExpenseId);
+        });
+      }
+      queueMicrotask(() => {
+        mirrorScheduledPaymentUpdateAsync(nextSp);
+      });
+      return {
+        ...d,
+        expenses,
+        scheduledPayments: (d.scheduledPayments ?? []).map((x) =>
+          x.id === id ? nextSp : x,
+        ),
+      };
+    });
+  }, []);
+
   const addPurchase = useCallback((input: Omit<InventoryPurchase, "id">) => {
     const purchase: InventoryPurchase = { ...input, id: newId() };
     setData((d) => {
@@ -986,6 +1108,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addExpenseRecurrence,
       updateExpenseRecurrence,
       deleteExpenseRecurrence,
+      addScheduledPayment,
+      updateScheduledPayment,
+      deleteScheduledPayment,
+      markScheduledPaymentAsPaid,
+      markScheduledPaymentAsPending,
       runExpenseRecurrenceTickNow,
       addPurchase,
       updatePurchase,
@@ -1018,6 +1145,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addExpenseRecurrence,
       updateExpenseRecurrence,
       deleteExpenseRecurrence,
+      addScheduledPayment,
+      updateScheduledPayment,
+      deleteScheduledPayment,
+      markScheduledPaymentAsPaid,
+      markScheduledPaymentAsPending,
       runExpenseRecurrenceTickNow,
       addPurchase,
       updatePurchase,

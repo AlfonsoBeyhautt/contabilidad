@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { AUTH_DISABLED } from "@/lib/feature-flags";
 import { getSupabaseMiddlewareResult } from "@/lib/supabase/supabase-middleware";
 
 function isSupabaseEnvReady(): boolean {
@@ -15,6 +16,15 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/favicon") ||
     /\.(?:ico|png|jpg|jpeg|gif|svg|webp)$/.test(pathname)
   ) {
+    return NextResponse.next();
+  }
+
+  // Flag global: si el login está desactivado, mandamos /login a / y dejamos
+  // pasar todo lo demás sin chequeo de sesión.
+  if (AUTH_DISABLED) {
+    if (pathname === "/login") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     return NextResponse.next();
   }
 

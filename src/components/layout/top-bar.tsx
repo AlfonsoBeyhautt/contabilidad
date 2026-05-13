@@ -5,15 +5,18 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { useTheme } from "@/contexts/theme-context";
 import { PeriodFilter } from "@/components/period/period-filter";
+import { AUTH_DISABLED } from "@/lib/feature-flags";
 
 const titles: Record<string, string> = {
   "/": "Inicio",
   "/ventas": "Ventas",
   "/productos": "Productos",
   "/stock": "Stock",
+  "/historial": "Historial de movimientos",
   "/gastos": "Gastos",
   "/costos": "Costos",
   "/clientes": "Clientes",
+  "/calendario": "Calendario de pagos",
   "/reportes": "Reportes",
   "/configuracion": "Configuración",
 };
@@ -54,14 +57,16 @@ export function TopBar({ onMenuToggle }: { onMenuToggle?: () => void }) {
             <Moon className="h-4 w-4" aria-hidden />
           )}
         </button>
-        <button
-          type="button"
-          onClick={() => void logout()}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-        >
-          <LogOut className="h-3.5 w-3.5" aria-hidden />
-          Salir
-        </button>
+        {!AUTH_DISABLED ? (
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+          >
+            <LogOut className="h-3.5 w-3.5" aria-hidden />
+            Salir
+          </button>
+        ) : null}
       </div>
     </header>
   );

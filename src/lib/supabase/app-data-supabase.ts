@@ -19,6 +19,7 @@ import type {
   RecurrenceFrequency,
   Sale,
   SaleLine,
+  ScheduledPayment,
   StockMovement,
   StockMovementKind,
   StockMovementRefKind,
@@ -154,6 +155,8 @@ type SettingsRow = {
   shop_name: string;
   currency: string;
   low_stock_alerts: boolean;
+  logo_data_url?: string | null;
+  legal_footer?: string | null;
 };
 
 type StockMovementRow = {
@@ -167,6 +170,20 @@ type StockMovementRow = {
   ref_id: string | null;
   note: string | null;
   created_at: string;
+};
+
+type ScheduledPaymentRow = {
+  id: string;
+  description: string;
+  amount: string | number;
+  category: string;
+  payment_method: string;
+  kind: string;
+  due_date: string;
+  paid: boolean;
+  paid_at: string | null;
+  paid_expense_id: string | null;
+  note: string | null;
 };
 
 function num(v: string | number): number {
@@ -257,6 +274,22 @@ function mapDefectiveRow(r: DefectiveRow): DefectiveEntry {
   };
 }
 
+function mapScheduledPaymentRow(r: ScheduledPaymentRow): ScheduledPayment {
+  return {
+    id: r.id,
+    description: r.description ?? "",
+    amount: num(r.amount),
+    category: normalizeExpenseCategory(r.category),
+    paymentMethod: r.payment_method as PaymentMethod,
+    kind: r.kind as ExpenseKind,
+    dueDate: r.due_date.slice(0, 10),
+    paid: r.paid,
+    paidAt: r.paid_at ?? undefined,
+    paidExpenseId: r.paid_expense_id ?? null,
+    note: r.note?.trim() ? r.note : undefined,
+  };
+}
+
 function mapStockMovementRow(r: StockMovementRow): StockMovement {
   return {
     id: r.id,
@@ -326,6 +359,10 @@ export async function fetchFullAppDataFromSupabase(
       .from("stock_movements")
       .select("*")
       .order("created_at", { ascending: true }),
+    supabase
+      .from("scheduled_payments")
+      .select("*")
+      .order("due_date", { ascending: true }),
   ]);
 
   function pickData<T>(
@@ -369,6 +406,11 @@ export async function fetchFullAppDataFromSupabase(
   const defRows = pickData<DefectiveRow[]>(8, "defective_entries", []);
   const recRows = pickData<RecurrenceRow[]>(9, "expense_recurrences", []);
   const stockMovRows = pickData<StockMovementRow[]>(10, "stock_movements", []);
+  const schedRows = pickData<ScheduledPaymentRow[]>(
+    11,
+    "scheduled_payments",
+    [],
+  );
 
   const productFamilies = famRows.map(mapFamilyRow);
   const familyById = new Map(productFamilies.map((f) => [f.id, f]));
@@ -420,6 +462,8 @@ export async function fetchFullAppDataFromSupabase(
         shopName: srow.shop_name,
         currency: srow.currency,
         lowStockAlerts: srow.low_stock_alerts,
+        logoDataUrl: srow.logo_data_url?.trim() ? srow.logo_data_url : undefined,
+        legalFooter: srow.legal_footer?.trim() ? srow.legal_footer : undefined,
       }
     : {
         shopName: "",
@@ -435,6 +479,7 @@ export async function fetchFullAppDataFromSupabase(
   );
 
   const stockMovements = stockMovRows.map(mapStockMovementRow);
+  const scheduledPayments = schedRows.map(mapScheduledPaymentRow);
 
   return migrateAppDataShape({
     productFamilies,
@@ -446,6 +491,7 @@ export async function fetchFullAppDataFromSupabase(
     defectives,
     expenseRecurrences,
     stockMovements,
+    scheduledPayments,
     settings,
   });
 }
@@ -461,6 +507,8 @@ export async function upsertSingletonSettingsToSupabase(
       shop_name: s.shopName,
       currency: s.currency,
       low_stock_alerts: s.lowStockAlerts,
+      logo_data_url: s.logoDataUrl ?? null,
+      legal_footer: s.legalFooter ?? null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "id" },
@@ -1080,6 +1128,72 @@ export async function insertStockMovementsBulkToSupabase(
     }));
   if (payload.length === 0) return { error: null };
   const { error } = await supabase.from("stock_movements").insert(payload);
+  return { error: error ? new Error(error.message) : null };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Scheduled payments                                                          */
+/* -------------------------------------------------------------------------- */
+
+export async function insertScheduledPaymentToSupabase(
+  supabase: SupabaseClient,
+  sp: ScheduledPayment,
+): Promise<{ error: Error | null }> {
+  if (!UUID_REGEX.test(sp.id)) {
+    return { error: new Error(`scheduled payment id no es UUID: ${sp.id}`) };
+  }
+  const { error } = await supabase.from("scheduled_payments").insert({
+    id: sp.id,
+    description: sp.description,
+    amount: sp.amount,
+    category: sp.category,
+    payment_method: sp.paymentMethod,
+    kind: sp.kind,
+    due_date: sp.dueDate,
+    paid: sp.paid,
+    paid_at: sp.paidAt ?? null,
+    paid_expense_id: sp.paidExpenseId ?? null,
+    note: sp.note ?? null,
+  });
+  return { error: error ? new Error(error.message) : null };
+}
+
+export async function patchScheduledPaymentInSupabase(
+  supabase: SupabaseClient,
+  sp: ScheduledPayment,
+): Promise<{ error: Error | null }> {
+  if (!UUID_REGEX.test(sp.id)) {
+    return { error: new Error(`scheduled payment id no es UUID: ${sp.id}`) };
+  }
+  const { error } = await supabase
+    .from("scheduled_payments")
+    .update({
+      description: sp.description,
+      amount: sp.amount,
+      category: sp.category,
+      payment_method: sp.paymentMethod,
+      kind: sp.kind,
+      due_date: sp.dueDate,
+      paid: sp.paid,
+      paid_at: sp.paidAt ?? null,
+      paid_expense_id: sp.paidExpenseId ?? null,
+      note: sp.note ?? null,
+    })
+    .eq("id", sp.id);
+  return { error: error ? new Error(error.message) : null };
+}
+
+export async function deleteScheduledPaymentFromSupabase(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<{ error: Error | null }> {
+  if (!UUID_REGEX.test(id)) {
+    return { error: new Error(`scheduled payment id no es UUID: ${id}`) };
+  }
+  const { error } = await supabase
+    .from("scheduled_payments")
+    .delete()
+    .eq("id", id);
   return { error: error ? new Error(error.message) : null };
 }
 

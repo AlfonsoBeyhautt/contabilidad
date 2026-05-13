@@ -20,6 +20,7 @@ import type {
   Product,
   ProductFamily,
   Sale,
+  ScheduledPayment,
   StockMovement,
 } from "@/lib/data/types";
 import {
@@ -41,8 +42,11 @@ import {
   insertProductToSupabase,
   insertPurchaseWithOneItemToSupabase,
   insertSaleWithItemsToSupabase,
+  insertScheduledPaymentToSupabase,
   insertStockMovementToSupabase,
   insertStockMovementsBulkToSupabase,
+  deleteScheduledPaymentFromSupabase,
+  patchScheduledPaymentInSupabase,
   patchCustomerInSupabase,
   patchExpenseInSupabase,
   patchPurchaseInSupabase,
@@ -463,6 +467,30 @@ export function mirrorStockMovementsBulkInsertAsync(
   queueMicrotask(() =>
     void runMirror("stock_movements_bulk_insert", (c) =>
       insertStockMovementsBulkToSupabase(c, movements),
+    ),
+  );
+}
+
+export function mirrorScheduledPaymentInsertAsync(sp: ScheduledPayment): void {
+  queueMicrotask(() =>
+    void runMirror("scheduled_payment_insert", (c) =>
+      insertScheduledPaymentToSupabase(c, sp),
+    ),
+  );
+}
+
+export function mirrorScheduledPaymentUpdateAsync(sp: ScheduledPayment): void {
+  queueMicrotask(() =>
+    void runMirror("scheduled_payment_update", (c) =>
+      patchScheduledPaymentInSupabase(c, sp),
+    ),
+  );
+}
+
+export function mirrorScheduledPaymentDeleteAsync(id: string): void {
+  queueMicrotask(() =>
+    void runMirror("scheduled_payment_delete", (c) =>
+      deleteScheduledPaymentFromSupabase(c, id),
     ),
   );
 }

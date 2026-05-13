@@ -139,6 +139,14 @@ export interface AppSettings {
   shopName: string;
   currency: string;
   lowStockAlerts: boolean;
+  /**
+   * Logo del negocio como data URL (data:image/png;base64,...). Opcional.
+   * Se usa en encabezados de PDFs descargables y en pantallas internas.
+   * Se guarda inline para evitar dependencia de Supabase Storage.
+   */
+  logoDataUrl?: string;
+  /** Slogan / leyenda corta opcional para el pie de los PDFs profesionales. */
+  legalFooter?: string;
 }
 
 /** Tipos de movimiento de stock para el ledger / historial. */
@@ -183,6 +191,28 @@ export interface StockMovement {
   createdAt: string;
 }
 
+/**
+ * Pago programado (planificado puntual): sueldo, marketing, producción, etc.
+ * A diferencia de `ExpenseRecurrence`, es una sola ocurrencia futura. Cuando se
+ * marca como pagado, se crea un `Expense` y se vincula con `paidExpenseId`.
+ */
+export interface ScheduledPayment {
+  id: string;
+  description: string;
+  amount: number;
+  category: ExpenseCategory;
+  paymentMethod: PaymentMethod;
+  kind: ExpenseKind;
+  /** Fecha en que debe pagarse (YYYY-MM-DD). */
+  dueDate: string;
+  paid: boolean;
+  /** ISO datetime de cuando se marcó como pagado. */
+  paidAt?: string;
+  /** Id del Expense creado al marcar como pagado. */
+  paidExpenseId?: string | null;
+  note?: string;
+}
+
 export interface AppData {
   productFamilies: ProductFamily[];
   products: Product[];
@@ -193,6 +223,7 @@ export interface AppData {
   expenseRecurrences: ExpenseRecurrence[];
   defectives: DefectiveEntry[];
   stockMovements: StockMovement[];
+  scheduledPayments: ScheduledPayment[];
   settings: AppSettings;
 }
 

@@ -1,9 +1,11 @@
 "use client";
 
-import { differenceInCalendarDays } from "date-fns";
+import { differenceInCalendarDays, parseISO } from "date-fns";
+import Link from "next/link";
 import {
   AlertTriangle,
   BarChart3,
+  CalendarClock,
   PiggyBank,
   ShoppingBag,
   TrendingDown,
@@ -39,6 +41,7 @@ import {
   topProductsByRevenue,
   type DateRange,
 } from "@/lib/data/finance-calcs";
+import { upcomingPayments } from "@/lib/data/calendar-helpers";
 import { formatCurrency, formatPercent } from "@/lib/format";
 
 function pctChange(current: number, previous: number): number {
@@ -113,6 +116,9 @@ export function DashboardView() {
     "Ganancia neta": Math.round(row["Ganancia bruta"] - row.Gastos),
   }));
 
+  const next7Days = upcomingPayments(data, 7);
+  const next7Total = next7Days.reduce((a, it) => a + it.amount, 0);
+
   return (
     <div className="space-y-8">
       <div>
@@ -120,6 +126,60 @@ export function DashboardView() {
           Resumen financiero y operativo según el período seleccionado arriba.
         </p>
       </div>
+
+      {next7Days.length > 0 ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-amber-100 p-1.5 text-amber-800 dark:bg-amber-900/60 dark:text-amber-100">
+                <CalendarClock className="h-4 w-4" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  {next7Days.length} pago
+                  {next7Days.length === 1 ? "" : "s"} en los próximos 7 días
+                </p>
+                <p className="text-xs text-amber-800/80 dark:text-amber-200/80">
+                  Total estimado:{" "}
+                  <strong>{formatCurrency(next7Total)}</strong>
+                </p>
+                <ul className="mt-2 space-y-1 text-xs text-amber-900 dark:text-amber-100">
+                  {next7Days.slice(0, 3).map((it) => (
+                    <li
+                      key={it.key}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span className="truncate">
+                        <span className="font-medium">
+                          {parseISO(`${it.date}T12:00:00`).toLocaleDateString(
+                            "es-AR",
+                            { day: "2-digit", month: "short" },
+                          )}
+                        </span>{" "}
+                        — {it.description}
+                      </span>
+                      <span className="shrink-0 font-semibold tabular-nums">
+                        {formatCurrency(it.amount)}
+                      </span>
+                    </li>
+                  ))}
+                  {next7Days.length > 3 ? (
+                    <li className="text-amber-700/80 dark:text-amber-300/80">
+                      +{next7Days.length - 3} más
+                    </li>
+                  ) : null}
+                </ul>
+              </div>
+            </div>
+            <Link
+              href="/calendario"
+              className="shrink-0 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-zinc-950 dark:text-amber-100 dark:hover:bg-amber-950/40"
+            >
+              Ver calendario
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         <StatCard

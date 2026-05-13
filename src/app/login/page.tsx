@@ -5,6 +5,7 @@ import { useEffect, useState, Suspense } from "react";
 import { Package } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { AUTH_DISABLED } from "@/lib/feature-flags";
 
 function safeNextPath(next: string | null): string {
   if (!next || !next.startsWith("/") || next.startsWith("//")) {
@@ -25,10 +26,22 @@ function LoginForm() {
   const nextPath = safeNextPath(searchParams.get("next"));
 
   useEffect(() => {
+    if (AUTH_DISABLED) {
+      router.replace("/");
+      return;
+    }
     if (authReady && supabaseConfigured && isAuthenticated) {
       router.replace(nextPath);
     }
   }, [authReady, supabaseConfigured, isAuthenticated, router, nextPath]);
+
+  if (AUTH_DISABLED) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-100 dark:bg-zinc-950">
+        <p className="text-sm text-zinc-500">Redirigiendo al panel…</p>
+      </div>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

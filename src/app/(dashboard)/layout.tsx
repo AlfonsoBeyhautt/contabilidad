@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
 import { DataProvider } from "@/contexts/data-context";
 import { PeriodProvider } from "@/contexts/period-context";
+import { AUTH_DISABLED } from "@/lib/feature-flags";
 
 export default function DashboardLayout({
   children,
@@ -17,10 +18,22 @@ export default function DashboardLayout({
   const router = useRouter();
 
   useEffect(() => {
+    if (AUTH_DISABLED) return;
     if (authReady && supabaseConfigured && !isAuthenticated) {
       router.replace("/login");
     }
   }, [authReady, supabaseConfigured, isAuthenticated, router]);
+
+  // Modo "login desactivado": entrar directo sin esperar a getSession().
+  if (AUTH_DISABLED) {
+    return (
+      <DataProvider>
+        <PeriodProvider>
+          <AppShell>{children}</AppShell>
+        </PeriodProvider>
+      </DataProvider>
+    );
+  }
 
   if (!authReady) {
     return (

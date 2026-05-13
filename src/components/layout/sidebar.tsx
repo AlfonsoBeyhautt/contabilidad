@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Boxes,
+  CalendarClock,
   CircleDollarSign,
   History,
   LayoutDashboard,
@@ -23,6 +24,7 @@ const nav = [
   { href: "/stock", label: "Stock", icon: Boxes },
   { href: "/historial", label: "Historial de movimientos", icon: History },
   { href: "/gastos", label: "Gastos", icon: Wallet },
+  { href: "/calendario", label: "Calendario de pagos", icon: CalendarClock },
   { href: "/costos", label: "Costos", icon: CircleDollarSign },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/reportes", label: "Reportes", icon: BarChart3 },

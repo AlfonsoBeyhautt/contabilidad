@@ -1,11 +1,46 @@
 "use client";
 
+import { useRef, useState } from "react";
+import { Image as ImageIcon, Trash2, Upload } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SupabaseStatusSection } from "./supabase-status";
 import { useAppData } from "@/contexts/data-context";
 
+const MAX_LOGO_BYTES = 300 * 1024;
+
 export function ConfigView() {
   const { data, dataSource, updateSettings, reloadAppData } = useAppData();
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+
+  function readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleLogoFile(file: File) {
+    setLogoError(null);
+    if (!/^image\/(png|jpeg|jpg|webp|svg\+xml)$/.test(file.type)) {
+      setLogoError("Formato no soportado. Usá PNG, JPG, WEBP o SVG.");
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      setLogoError(
+        `El archivo pesa ${Math.round(file.size / 1024)} KB. Máximo ${Math.round(MAX_LOGO_BYTES / 1024)} KB.`,
+      );
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      updateSettings({ logoDataUrl: dataUrl });
+    } catch {
+      setLogoError("No se pudo leer el archivo. Probá otro.");
+    }
+  }
   const sourceLabel =
     dataSource === "supabase"
       ? "Supabase"
@@ -50,6 +85,90 @@ export function ConfigView() {
             />
             Alertas de stock bajo en tablero
           </label>
+
+          <div className="space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Logo del negocio
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Se muestra en los reportes PDF. PNG / JPG / WEBP / SVG, máximo{" "}
+                {Math.round(MAX_LOGO_BYTES / 1024)} KB. Recomendado: cuadrado o
+                rectangular con fondo transparente.
+              </p>
+              <div className="mt-3 flex items-start gap-4">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+                  {data.settings.logoDataUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={data.settings.logoDataUrl}
+                      alt="Logo del negocio"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <ImageIcon
+                      className="h-8 w-8 text-zinc-400"
+                      aria-hidden
+                    />
+                  )}
+                </div>
+                <div className="flex flex-1 flex-col gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      <Upload className="h-3.5 w-3.5" aria-hidden />
+                      {data.settings.logoDataUrl ? "Reemplazar logo" : "Subir logo"}
+                    </button>
+                    {data.settings.logoDataUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => updateSettings({ logoDataUrl: undefined })}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900 dark:bg-zinc-950 dark:text-red-300 dark:hover:bg-red-950/40"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                        Quitar
+                      </button>
+                    ) : null}
+                  </div>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) await handleLogoFile(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  {logoError ? (
+                    <p
+                      role="alert"
+                      className="text-xs text-red-600 dark:text-red-400"
+                    >
+                      {logoError}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              Pie de página de los PDF (opcional)
+              <input
+                type="text"
+                value={data.settings.legalFooter ?? ""}
+                onChange={(e) =>
+                  updateSettings({ legalFooter: e.target.value })
+                }
+                placeholder="Ej: CUIT 20-XXXXXXXX-X · contacto@empresa.com"
+                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </label>
+          </div>
 
           <div className="border-t border-zinc-100 pt-4 dark:border-zinc-800">
             <button
