@@ -19,6 +19,9 @@ import type {
   RecurrenceFrequency,
   Sale,
   SaleLine,
+  StockMovement,
+  StockMovementKind,
+  StockMovementRefKind,
 } from "@/lib/data/types";
 
 export const UUID_REGEX =
@@ -153,6 +156,19 @@ type SettingsRow = {
   low_stock_alerts: boolean;
 };
 
+type StockMovementRow = {
+  id: string;
+  product_id: string;
+  size_key: string;
+  kind: string;
+  delta: number;
+  stock_after: number;
+  ref_kind: string | null;
+  ref_id: string | null;
+  note: string | null;
+  created_at: string;
+};
+
 function num(v: string | number): number {
   return typeof v === "number" ? v : Number(v);
 }
@@ -241,6 +257,21 @@ function mapDefectiveRow(r: DefectiveRow): DefectiveEntry {
   };
 }
 
+function mapStockMovementRow(r: StockMovementRow): StockMovement {
+  return {
+    id: r.id,
+    productId: r.product_id,
+    sizeKey: r.size_key || "_",
+    kind: r.kind as StockMovementKind,
+    delta: r.delta,
+    stockAfter: r.stock_after,
+    refKind: (r.ref_kind ?? undefined) as StockMovementRefKind | undefined,
+    refId: r.ref_id ?? undefined,
+    note: r.note?.trim() ? r.note : undefined,
+    createdAt: r.created_at,
+  };
+}
+
 function mapRecurrenceRow(r: RecurrenceRow): ExpenseRecurrence {
   return {
     id: r.id,
@@ -291,6 +322,10 @@ export async function fetchFullAppDataFromSupabase(
       .select("*")
       .order("recorded_at", { ascending: false }),
     supabase.from("expense_recurrences").select("*").order("next_run_at"),
+    supabase
+      .from("stock_movements")
+      .select("*")
+      .order("created_at", { ascending: true }),
   ]);
 
   function pickData<T>(
@@ -333,6 +368,7 @@ export async function fetchFullAppDataFromSupabase(
   const pitemRows = pickData<PurchaseItemRow[]>(7, "purchase_items", []);
   const defRows = pickData<DefectiveRow[]>(8, "defective_entries", []);
   const recRows = pickData<RecurrenceRow[]>(9, "expense_recurrences", []);
+  const stockMovRows = pickData<StockMovementRow[]>(10, "stock_movements", []);
 
   const productFamilies = famRows.map(mapFamilyRow);
   const familyById = new Map(productFamilies.map((f) => [f.id, f]));
@@ -398,6 +434,8 @@ export async function fetchFullAppDataFromSupabase(
     mapRecurrenceRow,
   );
 
+  const stockMovements = stockMovRows.map(mapStockMovementRow);
+
   return migrateAppDataShape({
     productFamilies,
     products,
@@ -407,6 +445,7 @@ export async function fetchFullAppDataFromSupabase(
     sales: salesMapped,
     defectives,
     expenseRecurrences,
+    stockMovements,
     settings,
   });
 }
@@ -986,6 +1025,61 @@ export async function setProductStockInSupabase(
     .from("products")
     .update({ stock, updated_at: new Date().toISOString() })
     .eq("id", productId);
+  return { error: error ? new Error(error.message) : null };
+}
+
+export async function insertStockMovementToSupabase(
+  supabase: SupabaseClient,
+  m: StockMovement,
+): Promise<{ error: Error | null }> {
+  if (!UUID_REGEX.test(m.id)) {
+    return { error: new Error(`stock movement id no es UUID: ${m.id}`) };
+  }
+  if (!UUID_REGEX.test(m.productId)) {
+    return {
+      error: new Error(
+        `productId no es UUID, no se replica movimiento: ${m.productId}`,
+      ),
+    };
+  }
+  const refId =
+    m.refId && UUID_REGEX.test(m.refId) ? m.refId : null;
+  const { error } = await supabase.from("stock_movements").insert({
+    id: m.id,
+    product_id: m.productId,
+    size_key: m.sizeKey || "_",
+    kind: m.kind,
+    delta: m.delta,
+    stock_after: m.stockAfter,
+    ref_kind: m.refKind ?? null,
+    ref_id: refId,
+    note: m.note ?? null,
+    created_at: m.createdAt,
+  });
+  return { error: error ? new Error(error.message) : null };
+}
+
+export async function insertStockMovementsBulkToSupabase(
+  supabase: SupabaseClient,
+  rows: StockMovement[],
+): Promise<{ error: Error | null }> {
+  if (rows.length === 0) return { error: null };
+  const payload = rows
+    .filter((m) => UUID_REGEX.test(m.id) && UUID_REGEX.test(m.productId))
+    .map((m) => ({
+      id: m.id,
+      product_id: m.productId,
+      size_key: m.sizeKey || "_",
+      kind: m.kind,
+      delta: m.delta,
+      stock_after: m.stockAfter,
+      ref_kind: m.refKind ?? null,
+      ref_id: m.refId && UUID_REGEX.test(m.refId) ? m.refId : null,
+      note: m.note ?? null,
+      created_at: m.createdAt,
+    }));
+  if (payload.length === 0) return { error: null };
+  const { error } = await supabase.from("stock_movements").insert(payload);
   return { error: error ? new Error(error.message) : null };
 }
 

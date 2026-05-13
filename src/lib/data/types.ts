@@ -141,6 +141,48 @@ export interface AppSettings {
   lowStockAlerts: boolean;
 }
 
+/** Tipos de movimiento de stock para el ledger / historial. */
+export type StockMovementKind =
+  | "compra"
+  | "compra_revert"
+  | "venta"
+  | "venta_revert"
+  | "defectuoso"
+  | "ajuste_manual"
+  | "alta_producto"
+  | "cascade_borrado";
+
+/** Origen referencial del movimiento (apuntador a la entidad que lo causó). */
+export type StockMovementRefKind =
+  | "sale"
+  | "purchase"
+  | "defective"
+  | "manual"
+  | "system";
+
+/**
+ * Ledger inmutable de movimientos de stock por (producto, talle).
+ * `delta` puede ser 0 para eventos informativos. `stockAfter` refleja el stock
+ * total del producto después del movimiento (suma de todos los talles).
+ */
+export interface StockMovement {
+  id: string;
+  productId: string;
+  /** Clave del talle (igual a `stockBySize`). "_" = sin talle. */
+  sizeKey: string;
+  kind: StockMovementKind;
+  /** Variación neta de unidades (+ ingresa, − sale). */
+  delta: number;
+  /** Stock total del producto después de aplicar el movimiento. */
+  stockAfter: number;
+  refKind?: StockMovementRefKind;
+  refId?: string;
+  /** Texto libre para anotar contexto (ej. "edición", "recuento físico"). */
+  note?: string;
+  /** ISO datetime; ordenamiento cronológico del ledger. */
+  createdAt: string;
+}
+
 export interface AppData {
   productFamilies: ProductFamily[];
   products: Product[];
@@ -150,6 +192,7 @@ export interface AppData {
   expenses: Expense[];
   expenseRecurrences: ExpenseRecurrence[];
   defectives: DefectiveEntry[];
+  stockMovements: StockMovement[];
   settings: AppSettings;
 }
 

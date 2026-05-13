@@ -11,6 +11,7 @@ export function emptyAppData(): AppData {
     expenses: [],
     expenseRecurrences: [],
     defectives: [],
+    stockMovements: [],
     settings: {
       shopName: "",
       currency: "ARS",

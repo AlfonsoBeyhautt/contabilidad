@@ -20,6 +20,7 @@ import type {
   Product,
   ProductFamily,
   Sale,
+  StockMovement,
 } from "@/lib/data/types";
 import {
   deleteCustomerFromSupabase,
@@ -40,6 +41,8 @@ import {
   insertProductToSupabase,
   insertPurchaseWithOneItemToSupabase,
   insertSaleWithItemsToSupabase,
+  insertStockMovementToSupabase,
+  insertStockMovementsBulkToSupabase,
   patchCustomerInSupabase,
   patchExpenseInSupabase,
   patchPurchaseInSupabase,
@@ -441,6 +444,25 @@ export function mirrorSettingsAsync(settings: AppSettings): void {
   queueMicrotask(() =>
     void runMirror("settings", (c) =>
       upsertSingletonSettingsToSupabase(c, settings),
+    ),
+  );
+}
+
+export function mirrorStockMovementInsertAsync(movement: StockMovement): void {
+  queueMicrotask(() =>
+    void runMirror("stock_movement_insert", (c) =>
+      insertStockMovementToSupabase(c, movement),
+    ),
+  );
+}
+
+export function mirrorStockMovementsBulkInsertAsync(
+  movements: StockMovement[],
+): void {
+  if (movements.length === 0) return;
+  queueMicrotask(() =>
+    void runMirror("stock_movements_bulk_insert", (c) =>
+      insertStockMovementsBulkToSupabase(c, movements),
     ),
   );
 }

@@ -46,6 +46,7 @@ export function migrateAppDataShape(data: AppData): AppData {
       products: [],
       expenseRecurrences: data.expenseRecurrences ?? [],
       defectives: data.defectives ?? [],
+      stockMovements: data.stockMovements ?? [],
     };
   }
 
@@ -115,5 +116,6 @@ export function migrateAppDataShape(data: AppData): AppData {
     products: outProducts,
     expenseRecurrences: data.expenseRecurrences ?? [],
     defectives: data.defectives ?? [],
+    stockMovements: data.stockMovements ?? [],
   };
 }

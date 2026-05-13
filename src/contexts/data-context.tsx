@@ -28,6 +28,16 @@ import {
   STOCK_BUCKET_DEFAULT,
 } from "@/lib/data/stock-helpers";
 import {
+  backfillStockMovements,
+  buildMovementForAdjustment,
+  buildMovementForDefective,
+  buildMovementForPurchaseApplied,
+  buildMovementForPurchaseReverted,
+  buildMovementsForInitialStock,
+  buildMovementsForSaleApplied,
+  buildMovementsForSaleReverted,
+} from "@/lib/data/stock-movement-helpers";
+import {
   clearAppDataLocalStorage,
   writeAppDataToLocalStorage,
 } from "@/lib/data/local-storage-app-data";
@@ -56,6 +66,8 @@ import {
   mirrorSaleDeleteAsync,
   mirrorSaleReplaceAsync,
   mirrorSettingsAsync,
+  mirrorStockMovementInsertAsync,
+  mirrorStockMovementsBulkInsertAsync,
   loadInitialAppDataWithMeta,
   type AppDataLoadSource,
   APP_DATA_PERSIST_ERROR_EVENT,
@@ -73,6 +85,7 @@ import type {
   ProductCategory,
   ProductFamily,
   Sale,
+  StockMovement,
 } from "@/lib/data/types";
 
 export type VariantSizeStockInput = { size: string; stock: number };
@@ -173,13 +186,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     void (async () => {
       const result = await loadInitialAppDataWithMeta();
-      if (!cancelled) {
-        setData(result.data);
-        setDataSource(result.source);
+      if (cancelled) return;
+      let nextData = result.data;
+      const hasMovements = (nextData.stockMovements?.length ?? 0) > 0;
+      const hasHistoryToReconstruct =
+        nextData.sales.length > 0 ||
+        nextData.purchases.length > 0 ||
+        (nextData.defectives?.length ?? 0) > 0 ||
+        nextData.products.length > 0;
+      if (!hasMovements && hasHistoryToReconstruct) {
+        const backfill = backfillStockMovements(nextData);
+        nextData = { ...nextData, stockMovements: backfill };
+        if (backfill.length > 0 && result.source === "supabase") {
+          mirrorStockMovementsBulkInsertAsync(backfill);
+        }
       }
-      if (!cancelled) {
-        setPersistReady(true);
-      }
+      setData(nextData);
+      setDataSource(result.source);
+      setPersistReady(true);
     })();
     return () => {
       cancelled = true;
@@ -195,7 +219,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const result = await loadInitialAppDataWithMeta();
       if (cancelled) return;
       if (result.source === "supabase") {
-        setData(result.data);
+        const hasMovements = (result.data.stockMovements?.length ?? 0) > 0;
+        const hasHistoryToReconstruct =
+          result.data.sales.length > 0 ||
+          result.data.purchases.length > 0 ||
+          (result.data.defectives?.length ?? 0) > 0 ||
+          result.data.products.length > 0;
+        let next = result.data;
+        if (!hasMovements && hasHistoryToReconstruct) {
+          const backfill = backfillStockMovements(result.data);
+          next = { ...result.data, stockMovements: backfill };
+          if (backfill.length > 0) {
+            mirrorStockMovementsBulkInsertAsync(backfill);
+          }
+        }
+        setData(next);
         setDataSource("supabase");
       }
     };
@@ -280,14 +318,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
         );
       }
       const touched = new Set(sale.lines.map((l) => l.productId));
+      const movements = buildMovementsForSaleApplied(sale, products);
       queueMicrotask(() => {
         mirrorSaleAsync(sale);
         for (const pid of touched) {
           const p = products.find((x) => x.id === pid);
           if (p) mirrorProductPatchAsync(pid, productFullPatch(p));
         }
+        mirrorStockMovementsBulkInsertAsync(movements);
       });
-      return { ...d, products, sales: [...d.sales, sale] };
+      return {
+        ...d,
+        products,
+        sales: [...d.sales, sale],
+        stockMovements: [...(d.stockMovements ?? []), ...movements],
+      };
     });
   }, []);
 
@@ -301,6 +346,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           line.productId === p.id ? revertSaleLineFromProduct(p, line) : p,
         );
       }
+      // Snapshot intermedio para registrar correctamente la reversión.
+      const productsAfterRevert = products;
       const newSale: Sale = { ...input, id };
       for (const line of newSale.lines) {
         products = products.map((p) =>
@@ -311,17 +358,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ...old.lines.map((l) => l.productId),
         ...newSale.lines.map((l) => l.productId),
       ]);
+      const movements = [
+        ...buildMovementsForSaleReverted(
+          old,
+          productsAfterRevert,
+          "Edición de venta",
+        ),
+        ...buildMovementsForSaleApplied(newSale, products, "Edición de venta"),
+      ];
       queueMicrotask(() => {
         mirrorSaleReplaceAsync(newSale);
         for (const pid of touched) {
           const p = products.find((x) => x.id === pid);
           if (p) mirrorProductPatchAsync(pid, productFullPatch(p));
         }
+        mirrorStockMovementsBulkInsertAsync(movements);
       });
       return {
         ...d,
         products,
         sales: d.sales.map((s) => (s.id === id ? newSale : s)),
+        stockMovements: [...(d.stockMovements ?? []), ...movements],
       };
     });
   }, []);
@@ -337,14 +394,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
         );
       }
       const touched = new Set(sale.lines.map((l) => l.productId));
+      const movements = buildMovementsForSaleReverted(
+        sale,
+        products,
+        "Eliminación de venta",
+      );
       queueMicrotask(() => {
         mirrorSaleDeleteAsync(id);
         for (const pid of touched) {
           const p = products.find((x) => x.id === pid);
           if (p) mirrorProductPatchAsync(pid, productFullPatch(p));
         }
+        mirrorStockMovementsBulkInsertAsync(movements);
       });
-      return { ...d, products, sales: d.sales.filter((s) => s.id !== id) };
+      return {
+        ...d,
+        products,
+        sales: d.sales.filter((s) => s.id !== id),
+        stockMovements: [...(d.stockMovements ?? []), ...movements],
+      };
     });
   }, []);
 
@@ -382,12 +450,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
           stockBySize,
         });
       });
+      const initialMovements: StockMovement[] = variants.flatMap((v) =>
+        buildMovementsForInitialStock(v),
+      );
       setData((d) => ({
         ...d,
         productFamilies: [...d.productFamilies, family],
         products: [...d.products, ...variants],
+        stockMovements: [...(d.stockMovements ?? []), ...initialMovements],
       }));
       mirrorProductFamilyWithVariantsAsync(family, variants);
+      mirrorStockMovementsBulkInsertAsync(initialMovements);
     },
     [],
   );
@@ -414,8 +487,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
           entryDate: fam.entryDate.slice(0, 10),
           stockBySize,
         });
-        queueMicrotask(() => mirrorProductInsertAsync(product));
-        return { ...d, products: [...d.products, product] };
+        const initialMovements = buildMovementsForInitialStock(product);
+        queueMicrotask(() => {
+          mirrorProductInsertAsync(product);
+          mirrorStockMovementsBulkInsertAsync(initialMovements);
+        });
+        return {
+          ...d,
+          products: [...d.products, product],
+          stockMovements: [...(d.stockMovements ?? []), ...initialMovements],
+        };
       });
     },
     [],
@@ -461,11 +542,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
           familyId,
         }),
       );
+      const stockMovements = (d.stockMovements ?? []).filter(
+        (m) => !removedProductIds.has(m.productId),
+      );
       return {
         ...d,
         sales,
         purchases,
         defectives,
+        stockMovements,
         productFamilies: d.productFamilies.filter((f) => f.id !== familyId),
         products: d.products.filter((p) => p.familyId !== familyId),
       };
@@ -518,6 +603,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         familyToDelete !== null
           ? d.productFamilies.filter((f) => f.id !== familyToDelete)
           : d.productFamilies;
+      const stockMovements = (d.stockMovements ?? []).filter(
+        (m) => !removedProductIds.has(m.productId),
+      );
 
       queueMicrotask(() =>
         mirrorAfterProductRemovalAsync(
@@ -533,6 +621,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         sales,
         purchases,
         defectives,
+        stockMovements,
         products: nextProducts,
         productFamilies: nextFamilies,
       };
@@ -553,12 +642,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
           updated = next;
           return next;
         });
-        if (updated) {
-          queueMicrotask(() =>
-            mirrorProductPatchAsync(productId, productFullPatch(updated!)),
-          );
-        }
-        return { ...d, products };
+        const updatedProduct = updated as Product | null;
+        if (!updatedProduct) return d;
+        const movement = buildMovementForAdjustment(
+          productId,
+          sizeKey ?? STOCK_BUCKET_DEFAULT,
+          delta,
+          updatedProduct.stock,
+        );
+        queueMicrotask(() => {
+          mirrorProductPatchAsync(productId, productFullPatch(updatedProduct));
+          mirrorStockMovementInsertAsync(movement);
+        });
+        return {
+          ...d,
+          products,
+          stockMovements: [...(d.stockMovements ?? []), movement],
+        };
       });
     },
     [],
@@ -593,11 +693,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
         id: newId(),
         recordedAt: new Date().toISOString(),
       };
-      setData((d) => ({
-        ...d,
-        defectives: [...(d.defectives ?? []), row],
-      }));
-      mirrorDefectiveInsertAsync(row);
+      setData((d) => {
+        const product = d.products.find((p) => p.id === row.productId);
+        const movement = buildMovementForDefective(
+          row,
+          product?.stock ?? 0,
+        );
+        queueMicrotask(() => {
+          mirrorDefectiveInsertAsync(row);
+          mirrorStockMovementInsertAsync(movement);
+        });
+        return {
+          ...d,
+          defectives: [...(d.defectives ?? []), row],
+          stockMovements: [...(d.stockMovements ?? []), movement],
+        };
+      });
     },
     [],
   );
@@ -687,11 +798,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
         p.id === pid ? applyPurchaseToProduct(p, purchase.quantity) : p,
       );
       const updated = products.find((x) => x.id === pid);
+      const movement = buildMovementForPurchaseApplied(purchase, updated);
       queueMicrotask(() => {
         mirrorPurchaseAsync(purchase);
         if (updated) mirrorProductPatchAsync(pid, productFullPatch(updated));
+        if (movement) mirrorStockMovementInsertAsync(movement);
       });
-      return { ...d, purchases: [...d.purchases, purchase], products };
+      return {
+        ...d,
+        purchases: [...d.purchases, purchase],
+        products,
+        stockMovements: movement
+          ? [...(d.stockMovements ?? []), movement]
+          : (d.stockMovements ?? []),
+      };
     });
   }, []);
 
@@ -701,29 +821,47 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const old = d.purchases.find((p) => p.id === id);
         if (!old) return d;
         const merged: InventoryPurchase = { ...old, ...input, id };
-        const products = d.products
-          .map((p) =>
-            p.id === old.productId
-              ? revertPurchaseFromProduct(p, old.quantity)
-              : p,
-          )
-          .map((p) =>
-            p.id === merged.productId
-              ? applyPurchaseToProduct(p, merged.quantity)
-              : p,
-          );
+        const productsAfterRevert = d.products.map((p) =>
+          p.id === old.productId
+            ? revertPurchaseFromProduct(p, old.quantity)
+            : p,
+        );
+        const products = productsAfterRevert.map((p) =>
+          p.id === merged.productId
+            ? applyPurchaseToProduct(p, merged.quantity)
+            : p,
+        );
         const purchases = d.purchases.map((p) =>
           p.id === id ? merged : p,
         );
         const syncIds = new Set([old.productId, merged.productId]);
+        const movements: StockMovement[] = [];
+        const revertMov = buildMovementForPurchaseReverted(
+          old,
+          productsAfterRevert.find((x) => x.id === old.productId),
+          "Edición de compra",
+        );
+        if (revertMov) movements.push(revertMov);
+        const applyMov = buildMovementForPurchaseApplied(
+          merged,
+          products.find((x) => x.id === merged.productId),
+          "Edición de compra",
+        );
+        if (applyMov) movements.push(applyMov);
         queueMicrotask(() => {
           mirrorPurchasePatchAsync(merged);
           for (const pid of syncIds) {
             const pr = products.find((x) => x.id === pid);
             if (pr) mirrorProductPatchAsync(pid, productFullPatch(pr));
           }
+          mirrorStockMovementsBulkInsertAsync(movements);
         });
-        return { ...d, purchases, products };
+        return {
+          ...d,
+          purchases,
+          products,
+          stockMovements: [...(d.stockMovements ?? []), ...movements],
+        };
       });
     },
     [],
@@ -739,6 +877,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
           : p,
       );
       const updated = products.find((x) => x.id === old.productId);
+      const movement = buildMovementForPurchaseReverted(
+        old,
+        updated,
+        "Eliminación de compra",
+      );
       queueMicrotask(() => {
         mirrorPurchaseDeleteAsync(id);
         if (updated) {
@@ -747,11 +890,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
             productFullPatch(updated),
           );
         }
+        if (movement) mirrorStockMovementInsertAsync(movement);
       });
       return {
         ...d,
         purchases: d.purchases.filter((p) => p.id !== id),
         products,
+        stockMovements: movement
+          ? [...(d.stockMovements ?? []), movement]
+          : (d.stockMovements ?? []),
       };
     });
   }, []);
@@ -794,7 +941,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const reloadAppData = useCallback(async () => {
     clearAppDataLocalStorage();
     const result = await loadInitialAppDataWithMeta();
-    setData(result.data);
+    let nextData = result.data;
+    const hasMovements = (nextData.stockMovements?.length ?? 0) > 0;
+    const hasHistoryToReconstruct =
+      nextData.sales.length > 0 ||
+      nextData.purchases.length > 0 ||
+      (nextData.defectives?.length ?? 0) > 0 ||
+      nextData.products.length > 0;
+    if (!hasMovements && hasHistoryToReconstruct) {
+      const backfill = backfillStockMovements(nextData);
+      nextData = { ...nextData, stockMovements: backfill };
+      if (backfill.length > 0 && result.source === "supabase") {
+        mirrorStockMovementsBulkInsertAsync(backfill);
+      }
+    }
+    setData(nextData);
     setDataSource(result.source);
   }, []);
 
