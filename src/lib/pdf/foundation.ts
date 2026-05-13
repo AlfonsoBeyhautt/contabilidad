@@ -761,6 +761,181 @@ export function drawDonut(
   ctx.y += blockH + 4;
 }
 
+/**
+ * Hero KPI ancho completo: ideal para "Ingresos" o "Ganancia neta" en portada.
+ * Más grande y vistoso que un KPI estándar, soporta delta y comparativo.
+ */
+export function drawHeroKpi(
+  ctx: DocContext,
+  card: {
+    label: string;
+    value: string;
+    deltaLabel?: string;
+    deltaTone?: "positive" | "negative" | "neutral";
+    description?: string;
+  },
+): void {
+  ensureSpace(ctx, 36);
+  const { doc } = ctx;
+  const w = PAGE.contentWidth;
+  const h = 30;
+
+  setFill(doc, COLORS.zebra);
+  setDraw(doc, COLORS.hairline);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(PAGE.contentLeft, ctx.y, w, h, 2.5, 2.5, "FD");
+
+  // Banda vertical acentuada
+  setFill(doc, COLORS.accent);
+  doc.rect(PAGE.contentLeft, ctx.y, 3, h, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  setText(doc, COLORS.mute);
+  doc.text(
+    card.label.toUpperCase(),
+    PAGE.contentLeft + 7,
+    ctx.y + 6,
+  );
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  setText(doc, COLORS.ink);
+  doc.text(card.value, PAGE.contentLeft + 7, ctx.y + 18);
+
+  if (card.deltaLabel) {
+    const tone =
+      card.deltaTone === "positive"
+        ? COLORS.positive
+        : card.deltaTone === "negative"
+          ? COLORS.negative
+          : COLORS.mute;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    setText(doc, tone);
+    doc.text(card.deltaLabel, PAGE.contentLeft + 7, ctx.y + 25);
+  }
+
+  if (card.description) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    setText(doc, COLORS.mute);
+    const lines = doc.splitTextToSize(
+      card.description,
+      Math.min(80, w / 2),
+    ) as string[];
+    for (let i = 0; i < Math.min(2, lines.length); i++) {
+      doc.text(lines[i], PAGE.contentRight - 4, ctx.y + 10 + i * 4.5, {
+        align: "right",
+      });
+    }
+  }
+
+  ctx.y += h + 4;
+}
+
+/**
+ * Barras verticales apiladas (hasta 3 series). Útil para "Estructura de costos
+ * mensual: COGS / Gastos / Defectuosos" o equivalentes.
+ */
+export type StackPoint = {
+  label: string;
+  segments: { value: number; color: [number, number, number] }[];
+};
+
+export function drawStackedBars(
+  ctx: DocContext,
+  data: StackPoint[],
+  opts?: {
+    height?: number;
+    currency?: string;
+    legend?: { label: string; color: [number, number, number] }[];
+  },
+): void {
+  if (data.length === 0) return;
+  const height = opts?.height ?? 60;
+  ensureSpace(ctx, height + 14);
+  const { doc } = ctx;
+  const x0 = PAGE.contentLeft + 16;
+  const y0 = ctx.y + height;
+  const w = PAGE.contentWidth - 18;
+  const h = height - 10;
+
+  const max = niceMax(
+    Math.max(
+      1,
+      ...data.map((p) =>
+        p.segments.reduce((a, s) => a + Math.max(0, s.value), 0),
+      ),
+    ),
+  );
+  const ticks = 4;
+  setDraw(doc, COLORS.hairline);
+  doc.setLineWidth(0.15);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  setText(doc, COLORS.mute);
+  for (let i = 0; i <= ticks; i++) {
+    const y = y0 - (i / ticks) * h;
+    doc.line(x0, y, x0 + w, y);
+    doc.text(
+      formatAxisCurrency((max / ticks) * i, opts?.currency ?? "ARS"),
+      x0 - 2,
+      y + 1,
+      { align: "right" },
+    );
+  }
+
+  const groupW = w / data.length;
+  const barW = groupW * 0.6;
+  for (let i = 0; i < data.length; i++) {
+    const p = data[i];
+    const x = x0 + i * groupW + (groupW - barW) / 2;
+    let cursorY = y0;
+    for (const seg of p.segments) {
+      const value = Math.max(0, seg.value);
+      const segH = (value / max) * h;
+      setFill(doc, seg.color);
+      doc.rect(x, cursorY - segH, barW, segH, "F");
+      cursorY -= segH;
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    setText(doc, COLORS.mute);
+    doc.text(p.label, x + barW / 2, y0 + 4, { align: "center" });
+  }
+  setDraw(doc, COLORS.hairline);
+  doc.setLineWidth(0.3);
+  doc.line(x0, y0, x0 + w, y0);
+
+  // Leyenda
+  if (opts?.legend && opts.legend.length > 0) {
+    let lx = x0;
+    const ly = ctx.y - 2;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    for (const it of opts.legend) {
+      setFill(doc, it.color);
+      doc.rect(lx, ly - 2.5, 2.5, 2.5, "F");
+      setText(doc, COLORS.ink);
+      doc.text(it.label, lx + 3.5, ly);
+      lx += doc.getTextWidth(it.label) + 8;
+    }
+  }
+
+  ctx.y += height + 4;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Función para forzar nueva página manualmente (cover sections, etc.)        */
+/* -------------------------------------------------------------------------- */
+
+export function forcePageBreak(ctx: DocContext): void {
+  ctx.doc.addPage();
+  ctx.y = 0;
+  drawLetterhead(ctx);
+}
+
 /* -------------------------------------------------------------------------- */
 /* Helpers de inicialización y guardado                                       */
 /* -------------------------------------------------------------------------- */

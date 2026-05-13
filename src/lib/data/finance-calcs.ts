@@ -420,6 +420,100 @@ export function missingRecurrenceAccrualByCategory(
   return init;
 }
 
+/**
+ * Detalle de los gastos del período para reporting profesional:
+ *
+ *   • emittedByCategory     → suma de `expenses` ya cargados (manuales + autoemitidos)
+ *   • projectedByCategory   → suma de cuotas de recurrencias que aún no se emitieron
+ *   • totalByCategory       → emittedByCategory + projectedByCategory
+ *   • emittedTotal          → suma de emittedByCategory
+ *   • projectedTotal        → suma de projectedByCategory
+ *   • total                 → emittedTotal + projectedTotal
+ *
+ * El "total" es la cifra correcta para usar en KPIs de gastos del período en
+ * reportes que se descargan antes de fin de mes/año: refleja el costo real
+ * esperado, no sólo lo ya emitido en el momento de la descarga.
+ */
+export function expensesForReportingPeriod(
+  data: AppData,
+  range: DateRange,
+): {
+  emittedByCategory: Record<ExpenseCategory, number>;
+  projectedByCategory: Record<ExpenseCategory, number>;
+  totalByCategory: Record<ExpenseCategory, number>;
+  emittedTotal: number;
+  projectedTotal: number;
+  total: number;
+} {
+  const emittedByCategory = expensesByCategory(
+    filterExpensesInRange(data.expenses ?? [], range),
+  );
+  const projectedByCategory = missingRecurrenceAccrualByCategory(data, range);
+  const cats: ExpenseCategory[] = [
+    "producción",
+    "marketing",
+    "envíos",
+    "otros",
+  ];
+  const totalByCategory = {} as Record<ExpenseCategory, number>;
+  for (const c of cats) {
+    totalByCategory[c] =
+      (emittedByCategory[c] ?? 0) + (projectedByCategory[c] ?? 0);
+  }
+  const emittedTotal = Object.values(emittedByCategory).reduce(
+    (a, v) => a + (v as number),
+    0,
+  );
+  const projectedTotal = Object.values(projectedByCategory).reduce(
+    (a, v) => a + (v as number),
+    0,
+  );
+  return {
+    emittedByCategory,
+    projectedByCategory,
+    totalByCategory,
+    emittedTotal,
+    projectedTotal,
+    total: emittedTotal + projectedTotal,
+  };
+}
+
+/**
+ * `periodMetrics` enriquecido con la proyección de recurrencias.
+ * Útil para informes ejecutivos (mensual / anual / costos / ganancias).
+ *
+ * La diferencia clave con `periodMetrics`:
+ *   - `expensesProjected` ≥ `expenses` (incluye recurrencias sin emitir)
+ *   - `netProfitProjected` usa `expensesProjected`
+ */
+export function periodMetricsWithProjections(
+  data: AppData,
+  range: DateRange,
+): ReturnType<typeof periodMetrics> & {
+  expensesEmitted: number;
+  expensesProjected: number;
+  expensesProjectedExtra: number;
+  netProfitProjected: number;
+  marginPctProjected: number;
+} {
+  const base = periodMetrics(data, range);
+  const breakdown = expensesForReportingPeriod(data, range);
+  const expensesProjected = breakdown.total;
+  const expensesProjectedExtra = breakdown.projectedTotal;
+  const netProfitProjected =
+    base.grossProfit - expensesProjected - base.defectiveLoss;
+  const marginPctProjected =
+    base.revenue > 0 ? (netProfitProjected / base.revenue) * 100 : 0;
+  return {
+    ...base,
+    expensesEmitted: base.expenses,
+    expensesProjected,
+    expensesProjectedExtra,
+    netProfitProjected,
+    marginPctProjected,
+  };
+}
+
 export function salesAggregatedByMonth(
   sales: Sale[],
   year: number,
@@ -441,6 +535,48 @@ export function salesAggregatedByMonth(
     buckets[m].gross += rev - cg;
   }
   return buckets;
+}
+
+/**
+ * Agregado mensual completo con gastos proyectados (recurrencias incluidas),
+ * defectuosos y ganancia neta. Útil para reporte anual / mensual.
+ */
+export function periodMetricsByMonth(
+  data: AppData,
+  year: number,
+): {
+  month: number;
+  revenue: number;
+  cogs: number;
+  gross: number;
+  expensesEmitted: number;
+  expensesProjected: number;
+  expensesTotal: number;
+  defectiveLoss: number;
+  netProfit: number;
+}[] {
+  const out: ReturnType<typeof periodMetricsByMonth> = [];
+  for (let i = 0; i < 12; i++) {
+    const monthStart = startOfMonth(new Date(year, i, 1));
+    const monthEnd = endOfMonth(monthStart);
+    const range: DateRange = {
+      start: startOfDay(monthStart),
+      end: endOfDay(monthEnd),
+    };
+    const m = periodMetricsWithProjections(data, range);
+    out.push({
+      month: i + 1,
+      revenue: m.revenue,
+      cogs: m.cogsSales,
+      gross: m.grossProfit,
+      expensesEmitted: m.expensesEmitted,
+      expensesProjected: m.expensesProjectedExtra,
+      expensesTotal: m.expensesProjected,
+      defectiveLoss: m.defectiveLoss,
+      netProfit: m.netProfitProjected,
+    });
+  }
+  return out;
 }
 
 export function filterSales(
