@@ -79,21 +79,41 @@ export function useTheme() {
   return ctx;
 }
 
-/** Colores para Recharts según modo (evita negro/blanco puros en trazos). */
+/** Colores para Recharts según modo. Paleta sobria + accents discretos. */
 export function useChartColors() {
   const { theme } = useTheme();
   return useMemo(() => {
     const dark = theme === "dark";
     return {
-      linePrimary: dark ? "#d4d4d8" : "#18181b",
-      lineMuted: dark ? "#71717a" : "#a1a1aa",
-      lineAccent: dark ? "#34d399" : "#059669",
-      bar: dark ? "#a1a1aa" : "#27272a",
-      barAlt: dark ? "#71717a" : "#3f3f46",
-      grid: dark ? "#3f3f46" : "#e4e4e7",
-      tooltipBg: dark ? "#1c1c1f" : "#ffffff",
-      tooltipBorder: dark ? "#3f3f46" : "#e4e4e7",
-      tooltipColor: dark ? "#e4e4e7" : "#18181b",
+      // Líneas
+      linePrimary: dark ? "#dde1e7" : "#0c0d10",
+      lineMuted: dark ? "#5e646e" : "#a8acb5",
+      lineAccent: dark ? "#6b9bff" : "#2f6feb",
+      linePositive: dark ? "#4ed18a" : "#0f8a4c",
+      lineNegative: dark ? "#f08585" : "#c43a3a",
+      lineWarning: dark ? "#e0a96d" : "#b3651a",
+
+      // Barras
+      bar: dark ? "#a3a8b2" : "#2a313c",
+      barAlt: dark ? "#5e646e" : "#7c828e",
+      barAccent: dark ? "#6b9bff" : "#2f6feb",
+
+      // Áreas / gradientes (id refs en el JSX)
+      areaPrimaryTop: dark ? "rgba(107,155,255,0.35)" : "rgba(47,111,235,0.22)",
+      areaPrimaryBottom: dark ? "rgba(107,155,255,0)" : "rgba(47,111,235,0)",
+
+      // Estructura
+      grid: dark ? "#1c2129" : "#eef0f3",
+      axis: dark ? "#5e646e" : "#868c95",
+      axisLabel: dark ? "#8a9098" : "#5b6168",
+
+      // Tooltip
+      tooltipBg: dark ? "#14181f" : "#ffffff",
+      tooltipBorder: dark ? "#2a313c" : "#e6e7eb",
+      tooltipColor: dark ? "#e6e8ec" : "#0c0d10",
+      tooltipShadow: dark
+        ? "0 12px 28px -8px rgba(0,0,0,0.6)"
+        : "0 12px 28px -8px rgba(15,23,42,0.12)",
     };
   }, [theme]);
 }

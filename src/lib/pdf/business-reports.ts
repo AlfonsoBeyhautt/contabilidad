@@ -486,19 +486,26 @@ function projectRecurrencesInRange(
         expectedTotal: 0,
       };
     }
+    const recStart = r.startDate
+      ? new Date(`${r.startDate}T00:00:00`)
+      : null;
     const recEnd = r.endDate ? new Date(`${r.endDate}T23:59:59`) : null;
     let count = 0;
     let cursor = new Date(`${r.nextRunAt}T12:00:00`);
 
-    // back-track hasta antes del start
+    // back-track hasta antes del start del rango (frenando si cruzamos recStart)
     while (cursor >= start) {
+      if (recStart && cursor < recStart) break;
       const prev = stepBack(cursor, r.frequency);
       if (prev < start) break;
+      if (recStart && prev < recStart) break;
       cursor = prev;
     }
     // contar ocurrencias en el rango
     while (cursor <= end) {
-      if (cursor >= start && (!recEnd || cursor <= recEnd)) {
+      const validStart = !recStart || cursor >= recStart;
+      const validEnd = !recEnd || cursor <= recEnd;
+      if (cursor >= start && validStart && validEnd) {
         count++;
       }
       cursor = stepForward(cursor, r.frequency);

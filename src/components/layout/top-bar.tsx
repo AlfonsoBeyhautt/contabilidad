@@ -21,35 +21,59 @@ const titles: Record<string, string> = {
   "/configuracion": "Configuración",
 };
 
+const subtitles: Record<string, string> = {
+  "/": "Resumen ejecutivo del negocio",
+  "/ventas": "Operaciones de venta y trazabilidad",
+  "/productos": "Catálogo de familias, modelos y talles",
+  "/stock": "Inventario disponible por variante",
+  "/historial": "Trazabilidad de stock por producto y talle",
+  "/gastos": "Registro y planificación de gastos",
+  "/costos": "Estructura de costos y márgenes",
+  "/clientes": "Base de clientes y comportamiento",
+  "/calendario": "Pagos previstos y vencimientos",
+  "/reportes": "Documentos analíticos descargables",
+  "/configuracion": "Preferencias y branding",
+};
+
 export function TopBar({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const pathname = usePathname();
   const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const title = titles[pathname] ?? "Panel";
+  const subtitle = subtitles[pathname];
 
   return (
-    <header className="flex min-h-14 flex-col gap-3 border-b border-zinc-200 bg-zinc-100/90 px-4 py-3 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900/95">
-      <div className="flex items-center gap-2">
+    <header className="sticky top-0 z-30 flex min-h-[64px] flex-col gap-3 border-b border-[var(--border)] bg-[color-mix(in_oklab,var(--background)_88%,transparent)] px-4 py-3 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
           onClick={onMenuToggle}
-          className="inline-flex items-center justify-center rounded-lg border border-zinc-200 p-2 text-zinc-700 transition-colors hover:bg-zinc-100 lg:hidden dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+          className="inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)] lg:hidden"
           aria-label="Abrir menú"
         >
           <Menu className="h-4 w-4" aria-hidden />
         </button>
-        <h1 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          {title}
-        </h1>
+        <div className="min-w-0">
+          <h1 className="truncate text-[17px] font-semibold tracking-tight text-[var(--foreground-strong)] sm:text-[18px]">
+            {title}
+          </h1>
+          {subtitle ? (
+            <p className="hidden truncate text-[12px] text-[var(--foreground-muted)] sm:block">
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
       </div>
-      <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:gap-4">
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
         <PeriodFilter />
         <button
           type="button"
           onClick={() => toggleTheme()}
-          className="inline-flex items-center justify-center rounded-lg border border-zinc-200 p-2 text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+          className="inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
           title={theme === "dark" ? "Modo claro" : "Modo oscuro"}
-          aria-label={theme === "dark" ? "Activar modo claro" : "Activar modo oscuro"}
+          aria-label={
+            theme === "dark" ? "Activar modo claro" : "Activar modo oscuro"
+          }
         >
           {theme === "dark" ? (
             <Sun className="h-4 w-4" aria-hidden />
@@ -61,7 +85,7 @@ export function TopBar({ onMenuToggle }: { onMenuToggle?: () => void }) {
           <button
             type="button"
             onClick={() => void logout()}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
           >
             <LogOut className="h-3.5 w-3.5" aria-hidden />
             Salir

@@ -86,6 +86,9 @@ function recurrenceOccurrencesInMonth(
   monthEnd: Date,
 ): Date[] {
   if (r.paused) return [];
+  const recStart = r.startDate
+    ? startOfDay(parseISO(`${r.startDate}T12:00:00`))
+    : null;
   const recEnd = r.endDate
     ? startOfDay(parseISO(`${r.endDate}T12:00:00`))
     : null;
@@ -93,18 +96,17 @@ function recurrenceOccurrencesInMonth(
 
   const out = new Set<string>();
   const push = (d: Date) => {
+    if (recStart && isBefore(d, recStart)) return;
+    if (recEnd && isAfter(d, recEnd)) return;
     out.add(format(d, "yyyy-MM-dd"));
   };
 
-  // Caminamos hacia atrás desde nextRunAt
+  // Caminamos hacia atrás desde nextRunAt, frenando al cruzar recStart.
   let cursor = next;
   let guard = 0;
   while (guard < 240 && !isBefore(cursor, monthStart)) {
     guard++;
-    if (recEnd && isAfter(cursor, recEnd)) {
-      cursor = unbump(cursor, r.frequency);
-      continue;
-    }
+    if (recStart && isBefore(cursor, recStart)) break;
     if (!isBefore(cursor, monthStart) && !isAfter(cursor, monthEnd)) {
       push(cursor);
     }

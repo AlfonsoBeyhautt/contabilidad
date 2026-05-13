@@ -374,6 +374,9 @@ export function missingRecurrenceAccrualByCategory(
 
   for (const r of recurrences) {
     if (r.paused) continue;
+    const recStart = r.startDate
+      ? startOfDay(parseISO(`${r.startDate}T12:00:00`))
+      : null;
     const recEnd = r.endDate
       ? endOfDay(parseISO(`${r.endDate}T12:00:00`))
       : null;
@@ -381,8 +384,10 @@ export function missingRecurrenceAccrualByCategory(
     const dayKeys = new Set<string>();
     let x = startOfDay(parseISO(`${r.nextRunAt}T12:00:00`));
     let guard = 0;
+    // Hacia atrás desde nextRunAt, frenando si cruzamos recStart o el rango.
     while (guard < 240 && !isBefore(x, rangeStart)) {
       guard++;
+      if (recStart && isBefore(x, recStart)) break;
       if (recEnd && isAfter(x, recEnd)) {
         x = unbumpRecurrenceSchedule(x, r.frequency);
         continue;
@@ -407,6 +412,7 @@ export function missingRecurrenceAccrualByCategory(
 
     for (const key of dayKeys) {
       const d = startOfDay(parseISO(`${key}T12:00:00`));
+      if (recStart && isBefore(d, recStart)) continue;
       if (recEnd && isAfter(d, recEnd)) continue;
       const dup = expenses.some(
         (e) =>
