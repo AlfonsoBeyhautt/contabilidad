@@ -46,6 +46,39 @@ import {
 } from "@/lib/data/finance-calcs";
 import type { CategoryMix } from "./types";
 
+const CANONICAL_PRODUCT_CATEGORIES: ProductCategory[] = [
+  "Remeras",
+  "Pantalones",
+  "Abrigos",
+  "Accesorios",
+  "Calzado",
+];
+
+const PRODUCT_CATEGORY_BY_NORMALIZED_KEY = new Map<string, ProductCategory>();
+for (const c of CANONICAL_PRODUCT_CATEGORIES) {
+  PRODUCT_CATEGORY_BY_NORMALIZED_KEY.set(c.toLowerCase(), c);
+}
+
+/**
+ * Datos reales (p. ej. Supabase) pueden traer `category` fuera del union
+ * tipado o con distinta capitalización. Las agregaciones por categoría
+ * asumen buckets fijos; sin esto `init[raw]` es undefined y rompe al leer
+ * `.revenue`.
+ */
+export function normalizeProductCategory(
+  raw: string | null | undefined,
+): ProductCategory {
+  if (raw == null || typeof raw !== "string") return "Accesorios";
+  const t = raw.trim();
+  if (t === "") return "Accesorios";
+  const byLower = PRODUCT_CATEGORY_BY_NORMALIZED_KEY.get(t.toLowerCase());
+  if (byLower) return byLower;
+  if ((CANONICAL_PRODUCT_CATEGORIES as readonly string[]).includes(t)) {
+    return t as ProductCategory;
+  }
+  return "Accesorios";
+}
+
 /* ─────────────────────────────────────────────────────────────────── */
 /*  Range helpers                                                      */
 /* ─────────────────────────────────────────────────────────────────── */
@@ -218,10 +251,11 @@ export function categoryMix(data: AppData, range: DateRange): CategoryMix[] {
       if (!product) continue;
       const rev = saleLineRevenue(l);
       const cost = (s.costSnapshot[l.productId] ?? 0) * l.quantity;
-      init[product.category].revenue += rev;
-      init[product.category].cogs += cost;
-      init[product.category].units += l.quantity;
-      init[product.category].grossProfit += rev - cost;
+      const cat = normalizeProductCategory(product.category);
+      init[cat].revenue += rev;
+      init[cat].cogs += cost;
+      init[cat].units += l.quantity;
+      init[cat].grossProfit += rev - cost;
     }
   }
   return Object.values(init).map((c) => ({
@@ -384,8 +418,9 @@ export function defectiveCostByCategory(
   for (const d of filtered) {
     const p = map.get(d.productId);
     if (!p) continue;
-    init[p.category].loss += d.quantity * d.unitCost;
-    init[p.category].units += d.quantity;
+    const cat = normalizeProductCategory(p.category);
+    init[cat].loss += d.quantity * d.unitCost;
+    init[cat].units += d.quantity;
   }
   return Object.entries(init).map(([category, v]) => ({
     category: category as ProductCategory,
