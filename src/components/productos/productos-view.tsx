@@ -329,9 +329,6 @@ export function ProductosView() {
           >
             Nuevo producto
           </button>
-          <p className="max-w-xs text-right text-[11px] leading-snug text-[var(--foreground-muted)]">
-            Usar solo para crear un producto por primera vez (familia + variantes).
-          </p>
         </div>
       </div>
 

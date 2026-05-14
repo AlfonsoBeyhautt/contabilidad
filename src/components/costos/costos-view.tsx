@@ -142,10 +142,6 @@ export function CostosView() {
         >
           Registrar compra de mercadería
         </button>
-        <p className="max-w-md text-right text-xs text-[var(--foreground-muted)]">
-          Usar para ingresar stock de productos ya creados (reposición). El
-          historial de compras y el stock se actualizan acá, no desde Productos.
-        </p>
       </div>
 
       <Card>

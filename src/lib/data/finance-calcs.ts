@@ -648,6 +648,50 @@ export function periodMetricsByMonth(
   return out;
 }
 
+/** Fila mensual lista para Recharts (ingresos, egresos totales, neto y desglose). */
+export type MonthlyChartRow = {
+  name: string;
+  month: number;
+  Ingresos: number;
+  Egresos: number;
+  "Ganancia neta": number;
+  COGS: number;
+  Gastos: number;
+  Defectuosos: number;
+};
+
+/**
+ * Serie mensual para gráficos: en el año calendario actual solo hasta el mes en curso;
+ * en años anteriores, los 12 meses completos.
+ */
+export function monthlyChartSeriesThroughCurrentMonth(
+  data: AppData,
+  year: number,
+  now = new Date(),
+): MonthlyChartRow[] {
+  const raw = periodMetricsByMonth(data, year).map((row) => {
+    const cogs = Math.round(row.cogs);
+    const gastos = Math.round(row.expensesTotal);
+    const def = Math.round(row.defectiveLoss);
+    const egresos = cogs + gastos + def;
+    return {
+      name: String(row.month).padStart(2, "0"),
+      month: row.month,
+      Ingresos: Math.round(row.revenue),
+      Egresos: egresos,
+      "Ganancia neta": Math.round(row.netProfit),
+      COGS: cogs,
+      Gastos: gastos,
+      Defectuosos: def,
+    };
+  });
+  const cy = now.getFullYear();
+  const cm = now.getMonth() + 1;
+  if (year > cy) return [];
+  if (year < cy) return raw;
+  return raw.filter((r) => r.month <= cm);
+}
+
 export function filterSales(
   sales: Sale[],
   opts: {

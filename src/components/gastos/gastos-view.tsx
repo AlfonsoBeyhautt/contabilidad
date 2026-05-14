@@ -21,7 +21,6 @@ import {
   filterDefectivesInRange,
   filterExpensesInRange,
   missingRecurrenceAccrualByCategory,
-  periodMetrics,
 } from "@/lib/data/finance-calcs";
 import type {
   Expense,
@@ -127,15 +126,10 @@ export function GastosView() {
     [byCat, recurrenceGap, defectiveLoss],
   );
 
-  const prevMetrics = useMemo(() => {
-    const len =
-      (range.end.getTime() - range.start.getTime()) / 86400000 + 1;
-    const prevEnd = new Date(range.start.getTime() - 86400000);
-    const prevStart = new Date(prevEnd.getTime() - (len - 1) * 86400000);
-    return periodMetrics(data, { start: prevStart, end: prevEnd });
-  }, [data, range]);
-
-  const currentTotal = filtered.reduce((a, e) => a + e.amount, 0);
+  const totalEgresosPeriodo = useMemo(
+    () => chartData.reduce((a, r) => a + r.monto, 0),
+    [chartData],
+  );
 
   return (
     <div className="space-y-6">
@@ -191,25 +185,13 @@ export function GastosView() {
       {tab === "gastos" ? (
         <>
           <div className="flex flex-wrap justify-between gap-4">
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-5 py-4/70">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-5 py-4">
               <p className="text-xs font-medium text-[var(--foreground-muted)]">
-                Total gastos registrados (período)
+                Total egresos del período (gastos + recurrentes proyectados +
+                defectuosos)
               </p>
               <p className="text-xl font-semibold tabular-nums text-[var(--foreground-strong)]">
-                {formatCurrency(currentTotal)}
-              </p>
-              <p className="mt-1 text-xs text-[var(--foreground-muted)]">
-                La gráfica incluye una barra aparte por defectuosos (no se suma
-                aquí). vs período anterior simétrico:{" "}
-                <span
-                  className={
-                    currentTotal <= prevMetrics.expenses
-                      ? "text-[var(--success)]"
-                      : "text-[var(--danger)]"
-                  }
-                >
-                  {formatCurrency(prevMetrics.expenses)}
-                </span>
+                {formatCurrency(totalEgresosPeriodo)}
               </p>
             </div>
           </div>
@@ -217,7 +199,7 @@ export function GastosView() {
           <Card>
             <CardHeader
               title="Gastos por categoría"
-              subtitle="Período seleccionado: suma gastos registrados (incl. automáticos) más cuotas recurrentes aún no emitidas en el período; barra aparte por defectuosos"
+              subtitle="Gastos emitidos y proyección de recurrentes en el período seleccionado."
             />
             <CardContent className="h-72">
               <ResponsiveContainer width="100%" height="100%">

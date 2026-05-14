@@ -138,7 +138,7 @@ export function StatCard({
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1.5">
             <p
-              className={`truncate font-semibold tabular-nums tracking-tight text-[var(--foreground-strong)] ${valueClass}`}
+              className={`break-words font-semibold tabular-nums tracking-tight text-[var(--foreground-strong)] ${valueClass}`}
             >
               {displayValue}
             </p>

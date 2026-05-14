@@ -1,13 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { differenceInCalendarDays } from "date-fns";
 import Link from "next/link";
 import {
   ArrowUpRight,
-  ChevronRight,
   CircleDollarSign,
-  Percent,
   Sparkles,
   TrendingDown,
   TrendingUp,
@@ -34,23 +31,28 @@ import { useChartColors } from "@/contexts/theme-context";
 import { usePeriod } from "@/contexts/period-context";
 import {
   compareToPreviousYear,
-  customerMetrics,
-  filterSalesInRange,
   monthPreviousRange,
-  parseISODate,
+  monthlyChartSeriesThroughCurrentMonth,
   periodMetricsWithProjections,
-  salesAggregatedByMonth,
-  stockStatus,
-  topProductsByRevenue,
-  type DateRange,
 } from "@/lib/data/finance-calcs";
-import { upcomingPayments } from "@/lib/data/calendar-helpers";
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { useAuth } from "@/contexts/auth-context";
 
-function pctChange(current: number, previous: number): number {
-  if (previous === 0) return current > 0 ? 100 : 0;
+function pctDeltaOrNull(current: number, previous: number): number | null {
+  if (previous === 0) return null;
   return ((current - previous) / previous) * 100;
+}
+
+function hasPeriodActivity(
+  x: ReturnType<typeof periodMetricsWithProjections>,
+): boolean {
+  return (
+    x.revenue > 0 ||
+    x.saleCount > 0 ||
+    x.cogsSales > 0 ||
+    x.expensesProjected > 0 ||
+    x.defectiveLoss > 0
+  );
 }
 
 function estadoFinancieroHeadline(
@@ -74,14 +76,6 @@ function trendHeadlineClass(headline: string): string {
   if (headline === "Negativa") return "text-[var(--danger)]";
   if (headline === "Positiva") return "text-[var(--success)]";
   return "text-[var(--foreground-strong)]";
-}
-
-function estadoCardShell(accent: "neutral" | "warning" | "negative"): string {
-  if (accent === "negative")
-    return "ring-1 ring-inset ring-[color-mix(in_oklab,var(--danger)_26%,transparent)]";
-  if (accent === "warning")
-    return "ring-1 ring-inset ring-[color-mix(in_oklab,var(--warning)_26%,transparent)]";
-  return "ring-1 ring-inset ring-[var(--border-subtle)]";
 }
 
 function financeRiskPresentation(
@@ -176,109 +170,63 @@ export function DashboardView() {
   const prevMonthRange = monthPreviousRange(range);
   const mPrevMonth = periodMetricsWithProjections(data, prevMonthRange);
 
-  const expensesMomDelta =
-    preset === "este_mes"
-      ? pctChange(m.expensesProjected, mPrevMonth.expensesProjected)
+  const yoyComparable = hasPeriodActivity(mYoy);
+  const momComparable = hasPeriodActivity(mPrevMonth);
+
+  const totalEgresos =
+    m.cogsSales + m.expensesProjected + m.defectiveLoss;
+
+  const revenueMomDelta =
+    preset === "este_mes" && momComparable
+      ? pctDeltaOrNull(m.revenue, mPrevMonth.revenue)
       : null;
+  const revenueYoyDelta = yoyComparable
+    ? pctDeltaOrNull(m.revenue, mYoy.revenue)
+    : null;
 
-  const revenueYoyDelta = pctChange(m.revenue, mYoy.revenue);
-  const netYoyDelta = pctChange(m.netProfitProjected, mYoy.netProfitProjected);
-  const expensesYoyDelta = pctChange(
-    m.expensesProjected,
-    mYoy.expensesProjected,
+  const netMomDelta =
+    preset === "este_mes" && momComparable
+      ? pctDeltaOrNull(m.netProfitProjected, mPrevMonth.netProfitProjected)
+      : null;
+  const netYoyDelta = yoyComparable
+    ? pctDeltaOrNull(m.netProfitProjected, mYoy.netProfitProjected)
+    : null;
+
+  const year = new Date().getFullYear();
+
+  const monthlyChart = useMemo(
+    () =>
+      monthlyChartSeriesThroughCurrentMonth(data, year, new Date()),
+    [data, year],
   );
-  const marginYoyPp = m.marginPctProjected - mYoy.marginPctProjected;
-  const marginMomPp = m.marginPctProjected - mPrevMonth.marginPctProjected;
 
-  const salesInRange = useMemo(
-    () => filterSalesInRange(data.sales, range),
-    [data.sales, range],
-  );
-  const topProducts = useMemo(
-    () => topProductsByRevenue(salesInRange, data.products, 6),
-    [salesInRange, data.products],
-  );
-
-  const lowStock = data.products.filter((p) => stockStatus(p) === "bajo");
-  const outStock = data.products.filter((p) => stockStatus(p) === "agotado");
-
-  const now = new Date();
-  const newCustomers = data.customers.filter((c) => {
-    const reg = parseISODate(c.registeredAt);
-    return differenceInCalendarDays(now, reg) <= 30;
-  }).length;
-
-  const year = now.getFullYear();
-  const monthly = useMemo(() => {
-    const rows = salesAggregatedByMonth(data.sales, year).map((row) => ({
-      name: String(row.month).padStart(2, "0"),
-      Ingresos: Math.round(row.revenue),
-      "Ganancia bruta": Math.round(row.gross),
-      Gastos: 0,
-      "Ganancia neta": 0,
-    }));
-    for (let i = 0; i < 12; i++) {
-      const monthStart = new Date(year, i, 1);
-      const monthEnd = new Date(year, i + 1, 0, 23, 59, 59);
-      const r: DateRange = { start: monthStart, end: monthEnd };
-      const pm = periodMetricsWithProjections(data, r);
-      rows[i].Gastos = Math.round(pm.expensesProjected);
-      rows[i]["Ganancia neta"] = Math.round(pm.netProfitProjected);
-    }
-    return rows;
-  }, [data, year]);
-
-  const chartNetMonthly = monthly.map((row) => ({
+  const chartNetMonthly = monthlyChart.map((row) => ({
     name: row.name,
     "Ganancia neta": row["Ganancia neta"],
   }));
 
-  const chartIngresosGastos = monthly.map((row) => ({
+  const chartIngresosEgresos = monthlyChart.map((row) => ({
     name: row.name,
     Ingresos: row.Ingresos,
-    Gastos: row.Gastos,
+    Egresos: row.Egresos,
   }));
 
-  const inventoryValueAtCost = useMemo(
-    () => data.products.reduce((a, p) => a + p.stock * p.purchaseCost, 0),
-    [data.products],
-  );
+  const chartEgresosBreakdown = monthlyChart.map((row) => ({
+    name: row.name,
+    COGS: row.COGS,
+    Gastos: row.Gastos,
+    Defectuosos: row.Defectuosos,
+  }));
 
-  const next7Days = upcomingPayments(data, 7);
-
-  const sparkMonthlySlice = useMemo(() => {
-    const end = new Date().getMonth();
-    const start = Math.max(0, end - 6);
-    return monthly.slice(start, end + 1);
-  }, [monthly]);
-
-  const sparkRevenue = useMemo(
-    () => sparkMonthlySlice.map((r) => r.Ingresos),
-    [sparkMonthlySlice],
-  );
-  const sparkNet = useMemo(
-    () => sparkMonthlySlice.map((r) => r["Ganancia neta"]),
-    [sparkMonthlySlice],
-  );
-  const sparkExpenses = useMemo(
-    () => sparkMonthlySlice.map((r) => r.Gastos),
-    [sparkMonthlySlice],
-  );
-  const sparkMarginPct = useMemo(
-    () =>
-      sparkMonthlySlice.map((r) =>
-        r.Ingresos > 0 ? (r["Ganancia neta"] / r.Ingresos) * 100 : 0,
-      ),
-    [sparkMonthlySlice],
-  );
+  const sparkSlice = monthlyChart.slice(Math.max(0, monthlyChart.length - 7));
+  const sparkRevenue = sparkSlice.map((r) => r.Ingresos);
+  const sparkEgresos = sparkSlice.map((r) => r.Egresos);
+  const sparkNet = sparkSlice.map((r) => r["Ganancia neta"]);
 
   const trendPanel = useMemo(() => {
-    const nowMonth = new Date().getMonth();
-    const windowStart = Math.max(0, nowMonth - 5);
-    const slice = monthly.slice(windowStart, nowMonth + 1);
-    const nets = slice.map((r) => r["Ganancia neta"]);
+    const nets = monthlyChart.map((r) => r["Ganancia neta"]);
     const negCount = nets.filter((n) => n < 0).length;
-    const lastNet = monthly[nowMonth]?.["Ganancia neta"] ?? 0;
+    const lastNet = nets[nets.length - 1] ?? 0;
 
     if (m.revenue <= 0 && m.saleCount === 0) {
       return {
@@ -301,7 +249,7 @@ export function DashboardView() {
     if (lastNet < 0) {
       return {
         headline: "Negativa" as const,
-        hint: "El mes actual proyecta cierre neto en rojo.",
+        hint: "El último mes de la serie cierra con resultado neto en rojo.",
       };
     }
     if (negCount === 0) {
@@ -314,57 +262,23 @@ export function DashboardView() {
       headline: "Estable" as const,
       hint: "Mezcla de meses positivos y ajustes; conviene vigilar el margen.",
     };
-  }, [monthly, m.revenue, m.saleCount]);
-
-  const alertBundleCount = useMemo(() => {
-    let n = 0;
-    if (m.netProfitProjected < 0) n += 1;
-    if (next7Days.length > 0) n += 1;
-    if (outStock.length + lowStock.length > 0) n += 1;
-    if (m.defectiveLoss > 0) n += 1;
-    return n;
-  }, [
-    m.netProfitProjected,
-    m.defectiveLoss,
-    next7Days.length,
-    outStock.length,
-    lowStock.length,
-  ]);
+  }, [monthlyChart, m.revenue, m.saleCount]);
 
   const risk = financeRiskPresentation(m);
   const periodLabel = periodDescription(preset);
 
-  const bestCustomers = useMemo(
-    () =>
-      [...data.customers]
-        .map((c) => ({
-          c,
-          ...customerMetrics(c, data.sales, data.products),
-        }))
-        .sort((a, b) => b.totalSpent - a.totalSpent)
-        .slice(0, 5),
-    [data.customers, data.sales, data.products],
-  );
-
-  const expensePressureRatio =
-    m.revenue > 0 ? m.expensesProjected / m.revenue : 0;
-  const expensesAccent: "neutral" | "warning" | "negative" =
-    expensePressureRatio > 0.75 || m.netProfitProjected < 0
-      ? "negative"
-      : expensePressureRatio > 0.55
-        ? "warning"
-        : "neutral";
-
   const nowMonthIdx = new Date().getMonth();
-  const lastNetForChart = monthly[nowMonthIdx]?.["Ganancia neta"] ?? 0;
+  const lastNetForChart =
+    monthlyChart.find((r) => r.month === nowMonthIdx + 1)?.[
+      "Ganancia neta"
+    ] ?? monthlyChart[monthlyChart.length - 1]?.["Ganancia neta"] ?? 0;
   const netLineStroke =
     lastNetForChart >= 0 ? chart.linePositive : chart.lineNegative;
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-8 pb-10">
-      {/* A · Cabecera */}
-      <section className="animate-rise rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)] sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="mx-auto max-w-[1400px] space-y-8 pb-10">
+      <header className="animate-rise space-y-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 space-y-1.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--foreground-subtle)]">
               Inicio · período {periodLabel}
@@ -374,43 +288,76 @@ export function DashboardView() {
                 ? `${greeting()}, ${firstName}.`
                 : `${greeting()}.`}
             </h1>
-            <p className="max-w-xl text-[13px] leading-relaxed text-[var(--foreground-muted)]">
-              Así viene tu negocio desde el inicio operativo.
+            <p className="max-w-2xl text-[13px] leading-relaxed text-[var(--foreground-muted)]">
+              Resumen financiero del negocio: entradas, salidas y resultado.
             </p>
           </div>
           <Link
             href="/inteligencia"
-            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-[13px] font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface)]"
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-medium text-[var(--foreground)] shadow-[var(--shadow-sm)] transition-colors hover:bg-[var(--surface-muted)]"
           >
             Ver resumen ejecutivo
             <ArrowUpRight className="h-3.5 w-3.5 opacity-70" aria-hidden />
           </Link>
         </div>
-      </section>
+      </header>
 
-      {/* B · KPIs principales */}
+      {/* KPIs: Ingresos · Egresos · Resultado */}
       <section className="space-y-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <StatCard
-            label="Ingresos totales"
+            label="Ingresos"
+            size="hero"
             value={formatCurrency(m.revenue)}
             hint={`${m.saleCount} ventas · ${Math.round(m.unitsSold)} uds.`}
             icon={<CircleDollarSign className="h-4 w-4" aria-hidden />}
             accent="info"
             countUpAmount={m.revenue}
             formatCountUp={(n) => formatCurrency(n)}
-            sparkline={sparkRevenue}
+            sparkline={sparkRevenue.length > 1 ? sparkRevenue : undefined}
             sparklineTone="info"
-            delta={{
-              value: revenueYoyDelta,
-              label: "vs año anterior",
-              neutralOnZero: true,
-            }}
+            delta={
+              preset === "este_mes" &&
+              momComparable &&
+              revenueMomDelta !== null
+                ? {
+                    value: revenueMomDelta,
+                    label: "vs mes anterior",
+                    neutralOnZero: true,
+                  }
+                : yoyComparable && revenueYoyDelta !== null
+                  ? {
+                      value: revenueYoyDelta,
+                      label: "vs año anterior",
+                      neutralOnZero: true,
+                    }
+                  : undefined
+            }
           />
           <StatCard
-            label="Resultado neto"
+            label="Egresos totales"
+            size="hero"
+            value={formatCurrency(totalEgresos)}
+            hint={`COGS ${formatCurrency(m.cogsSales)} · Gastos ${formatCurrency(m.expensesProjected)} · Defectuosos ${formatCurrency(m.defectiveLoss)}`}
+            icon={<Wallet className="h-4 w-4" aria-hidden />}
+            accent={
+              m.revenue > 0 && totalEgresos / m.revenue > 0.85
+                ? "negative"
+                : m.revenue > 0 && totalEgresos / m.revenue > 0.65
+                  ? "warning"
+                  : "neutral"
+            }
+            countUpAmount={totalEgresos}
+            formatCountUp={(n) => formatCurrency(n)}
+            sparkline={sparkEgresos.length > 1 ? sparkEgresos : undefined}
+            sparklineTone="muted"
+          />
+          <StatCard
+            label="Resultado final"
+            size="hero"
+            prominence="primary"
             value={formatCurrency(m.netProfitProjected)}
-            hint={`Margen neto ${formatPercent(m.marginPctProjected)}`}
+            hint={`Margen neto ${formatPercent(m.marginPctProjected)} sobre ingresos`}
             icon={
               m.netProfitProjected >= 0 ? (
                 <TrendingUp className="h-4 w-4" aria-hidden />
@@ -422,136 +369,74 @@ export function DashboardView() {
             financialStress="none"
             countUpAmount={m.netProfitProjected}
             formatCountUp={(n) => formatCurrency(n)}
-            sparkline={sparkNet}
+            sparkline={sparkNet.length > 1 ? sparkNet : undefined}
             sparklineTone={
               (sparkNet[sparkNet.length - 1] ?? 0) >= 0
                 ? "positive"
                 : "negative"
             }
-            delta={{
-              value: netYoyDelta,
-              label: "vs año anterior",
-              neutralOnZero: true,
-            }}
-          />
-          <StatCard
-            label="Gastos operativos"
-            value={formatCurrency(m.expensesProjected)}
-            hint={`${(expensePressureRatio * 100).toFixed(0)}% de ingresos · emitidos ${formatCurrency(m.expensesEmitted)}`}
-            icon={<Wallet className="h-4 w-4" aria-hidden />}
-            accent={expensesAccent}
-            countUpAmount={m.expensesProjected}
-            formatCountUp={(n) => formatCurrency(n)}
-            sparkline={sparkExpenses}
-            sparklineTone={expensesAccent === "negative" ? "negative" : "muted"}
             delta={
-              preset === "este_mes" && expensesMomDelta !== null
+              preset === "este_mes" && momComparable && netMomDelta !== null
                 ? {
-                    value: expensesMomDelta,
+                    value: netMomDelta,
                     label: "vs mes anterior",
                     neutralOnZero: true,
                   }
-                : {
-                    value: expensesYoyDelta,
-                    label: "vs año anterior",
-                    neutralOnZero: true,
-                  }
+                : yoyComparable && netYoyDelta !== null
+                  ? {
+                      value: netYoyDelta,
+                      label: "vs año anterior",
+                      neutralOnZero: true,
+                    }
+                  : undefined
             }
-          />
-          <StatCard
-            label="Margen neto"
-            value={formatPercent(m.marginPctProjected)}
-            hint="Sobre ingresos del período"
-            icon={<Percent className="h-4 w-4" aria-hidden />}
-            accent={m.marginPctProjected >= 0 ? "positive" : "negative"}
-            countUpAmount={m.marginPctProjected}
-            formatCountUp={(n) => formatPercent(n, 1)}
-            sparkline={sparkMarginPct}
-            sparklineTone={
-              m.marginPctProjected >= 0 ? "positive" : "negative"
-            }
-            delta={{
-              value: preset === "este_mes" ? marginMomPp : marginYoyPp,
-              label:
-                preset === "este_mes" ? "vs mes anterior" : "vs año anterior",
-              neutralOnZero: true,
-              display: "percentagePoints",
-            }}
           />
         </div>
         <p className="text-[11.5px] leading-snug text-[var(--foreground-muted)]">
-          COGS {formatCurrency(m.cogsSales)} · Bruto{" "}
-          {formatCurrency(m.grossProfit)} · Operativo{" "}
+          Bruto {formatCurrency(m.grossProfit)} · Operativo{" "}
           {formatCurrency(m.operatingProfitProjected)} (
           {formatPercent(m.operatingMarginPctProjected)})
         </p>
       </section>
 
-      {/* C · Estado general */}
-      <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <Card
-          className={`min-h-[152px] overflow-hidden bg-[var(--surface)] ${estadoCardShell(risk.accent)}`}
-        >
-          <CardContent className="flex h-full flex-col p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--foreground-subtle)]">
-              Estado financiero
-            </p>
-            <p
-              className={`mt-3 text-[22px] font-semibold tracking-tight ${estadoHeadlineClass(estadoFinancieroHeadline(risk))}`}
-            >
-              {estadoFinancieroHeadline(risk)}
-            </p>
-            <p className="mt-2 flex-1 text-[12.5px] leading-snug text-[var(--foreground-muted)]">
-              {risk.hint}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="min-h-[152px] overflow-hidden bg-[var(--surface)] ring-1 ring-inset ring-[var(--border-subtle)]">
-          <CardContent className="flex h-full flex-col p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--foreground-subtle)]">
-              Tendencia
-            </p>
-            <p
-              className={`mt-3 text-[22px] font-semibold tracking-tight ${trendHeadlineClass(trendPanel.headline)}`}
-            >
-              {trendPanel.headline}
-            </p>
-            <p className="mt-2 flex-1 text-[12.5px] leading-snug text-[var(--foreground-muted)]">
-              {trendPanel.hint}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="min-h-[152px] overflow-hidden bg-[var(--surface)] ring-1 ring-inset ring-[var(--border-subtle)]">
-          <CardContent className="flex h-full flex-col p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--foreground-subtle)]">
-              Alertas importantes
-            </p>
-            <p className="mt-3 text-[22px] font-semibold tabular-nums tracking-tight text-[var(--foreground-strong)]">
-              {alertBundleCount}
-            </p>
-            <p className="mt-2 flex-1 text-[12.5px] leading-snug text-[var(--foreground-muted)]">
-              {alertBundleCount === 0
-                ? "Sin focos críticos: resultado, calendario, stock y defectuosos están en orden."
-                : "Incluye resultado, pagos próximos, stock crítico y defectuosos cuando aplica."}
-            </p>
-            <Link
-              href="/inteligencia"
-              className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
-            >
-              Ver detalle
-              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-            </Link>
-          </CardContent>
-        </Card>
-      </section>
-      {/* D · Evolución financiera */}
+      {/* Estado + tendencia */}
+      <Card className="overflow-hidden bg-[var(--surface)] ring-1 ring-inset ring-[var(--border-subtle)]">
+        <CardContent className="p-5 sm:p-6">
+          <div className="grid gap-6 md:grid-cols-2 md:gap-10">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--foreground-subtle)]">
+                Estado financiero
+              </p>
+              <p
+                className={`mt-2 text-[20px] font-semibold tracking-tight sm:text-[22px] ${estadoHeadlineClass(estadoFinancieroHeadline(risk))}`}
+              >
+                {estadoFinancieroHeadline(risk)}
+              </p>
+              <p className="mt-2 text-[12.5px] leading-relaxed text-[var(--foreground-muted)]">
+                {risk.hint}
+              </p>
+            </div>
+            <div className="border-t border-[var(--border-subtle)] pt-5 md:border-l md:border-t-0 md:pl-10 md:pt-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--foreground-subtle)]">
+                Tendencia
+              </p>
+              <p
+                className={`mt-2 text-[20px] font-semibold tracking-tight sm:text-[22px] ${trendHeadlineClass(trendPanel.headline)}`}
+              >
+                {trendPanel.headline}
+              </p>
+              <p className="mt-2 text-[12.5px] leading-relaxed text-[var(--foreground-muted)]">
+                {trendPanel.hint}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       <section className="space-y-3">
         <SectionHeader
           eyebrow="Evolución"
           title="Finanzas mensuales"
-          description={`Año ${year}. Gastos proyectados y resultado neto por mes.`}
+          description={`Año ${year} hasta el mes actual. Egresos = COGS + gastos operativos + defectuosos.`}
         />
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Card>
@@ -561,157 +446,179 @@ export function DashboardView() {
               subtitle={`Año ${year}`}
             />
             <CardContent className="h-[220px] min-h-[200px] min-w-0 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={chartNetMonthly}
-                  margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
-                >
-                  <CartesianGrid
-                    vertical={false}
-                    stroke={chart.grid}
-                    strokeDasharray="2 4"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    tickLine={false}
-                    axisLine={{ stroke: chart.grid }}
-                    tick={{ fontSize: 10, fill: chart.axisLabel }}
-                    dy={4}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    width={40}
-                    tick={{ fontSize: 10, fill: chart.axisLabel }}
-                    tickFormatter={(v) =>
-                      v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`
-                    }
-                  />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="Ganancia neta"
-                    stroke={netLineStroke}
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {chartNetMonthly.length === 0 ? (
+                <EmptyState
+                  icon={<Sparkles className="h-4 w-4" aria-hidden />}
+                  title="Sin datos"
+                  description="No hay meses disponibles en la serie."
+                />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={chartNetMonthly}
+                    margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                  >
+                    <CartesianGrid
+                      vertical={false}
+                      stroke={chart.grid}
+                      strokeDasharray="2 4"
+                    />
+                    <XAxis
+                      dataKey="name"
+                      tickLine={false}
+                      axisLine={{ stroke: chart.grid }}
+                      tick={{ fontSize: 10, fill: chart.axisLabel }}
+                      dy={4}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      width={44}
+                      tick={{ fontSize: 10, fill: chart.axisLabel }}
+                      tickFormatter={(v) =>
+                        v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`
+                      }
+                    />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Line
+                      type="monotone"
+                      dataKey="Ganancia neta"
+                      stroke={netLineStroke}
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader
               eyebrow="Mensual"
-              title="Ingresos vs gastos"
+              title="Ingresos vs egresos"
               subtitle={`Año ${year}`}
             />
             <CardContent className="h-[220px] min-h-[200px] min-w-0 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={chartIngresosGastos}
-                  margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
-                >
-                  <CartesianGrid
-                    vertical={false}
-                    stroke={chart.grid}
-                    strokeDasharray="2 4"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    tickLine={false}
-                    axisLine={{ stroke: chart.grid }}
-                    tick={{ fontSize: 10, fill: chart.axisLabel }}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    width={40}
-                    tick={{ fontSize: 10, fill: chart.axisLabel }}
-                    tickFormatter={(v) =>
-                      v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`
-                    }
-                  />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend
-                    wrapperStyle={{ fontSize: 11, color: chart.axisLabel }}
-                    iconType="circle"
-                  />
-                  <Bar
-                    dataKey="Ingresos"
-                    fill={chart.barAccent}
-                    radius={[3, 3, 0, 0]}
-                    maxBarSize={18}
-                  />
-                  <Bar
-                    dataKey="Gastos"
-                    fill={chart.lineNegative}
-                    radius={[3, 3, 0, 0]}
-                    maxBarSize={18}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader
-              eyebrow="Período seleccionado"
-              title="Top productos por ingresos"
-              subtitle="En el rango activo"
-              action={
-                <Link
-                  href="/reportes"
-                  className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
-                >
-                  Ver todos
-                  <ChevronRight className="h-3 w-3" aria-hidden />
-                </Link>
-              }
-            />
-            <CardContent className="h-[220px] min-h-[200px] min-w-0 pt-2">
-              {topProducts.length === 0 ? (
+              {chartIngresosEgresos.length === 0 ? (
                 <EmptyState
                   icon={<Sparkles className="h-4 w-4" aria-hidden />}
-                  title="Sin ventas"
-                  description="No hay datos en este período."
+                  title="Sin datos"
+                  description="No hay meses disponibles en la serie."
                 />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={topProducts}
-                    layout="vertical"
-                    margin={{ top: 4, right: 8, bottom: 0, left: 0 }}
+                    data={chartIngresosEgresos}
+                    margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
                   >
                     <CartesianGrid
-                      strokeDasharray="2 4"
-                      horizontal={false}
+                      vertical={false}
                       stroke={chart.grid}
+                      strokeDasharray="2 4"
                     />
                     <XAxis
-                      type="number"
+                      dataKey="name"
+                      tickLine={false}
+                      axisLine={{ stroke: chart.grid }}
+                      tick={{ fontSize: 10, fill: chart.axisLabel }}
+                    />
+                    <YAxis
                       tickLine={false}
                       axisLine={false}
+                      width={44}
                       tick={{ fontSize: 10, fill: chart.axisLabel }}
                       tickFormatter={(v) =>
                         v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`
                       }
                     />
-                    <YAxis
-                      type="category"
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend
+                      wrapperStyle={{ fontSize: 11, color: chart.axisLabel }}
+                      iconType="circle"
+                    />
+                    <Bar
+                      dataKey="Ingresos"
+                      fill={chart.barAccent}
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={18}
+                    />
+                    <Bar
+                      dataKey="Egresos"
+                      fill={chart.lineNegative}
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={18}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader
+              eyebrow="Mensual"
+              title="Composición de egresos"
+              subtitle="COGS, gastos y defectuosos por mes"
+            />
+            <CardContent className="h-[220px] min-h-[200px] min-w-0 pt-2">
+              {chartEgresosBreakdown.length === 0 ? (
+                <EmptyState
+                  icon={<Sparkles className="h-4 w-4" aria-hidden />}
+                  title="Sin datos"
+                  description="No hay meses disponibles en la serie."
+                />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chartEgresosBreakdown}
+                    margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                  >
+                    <CartesianGrid
+                      vertical={false}
+                      stroke={chart.grid}
+                      strokeDasharray="2 4"
+                    />
+                    <XAxis
                       dataKey="name"
-                      width={110}
                       tickLine={false}
-                      axisLine={false}
+                      axisLine={{ stroke: chart.grid }}
                       tick={{ fontSize: 10, fill: chart.axisLabel }}
                     />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      width={44}
+                      tick={{ fontSize: 10, fill: chart.axisLabel }}
+                      tickFormatter={(v) =>
+                        v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`
+                      }
+                    />
                     <Tooltip content={<ChartTooltip />} />
+                    <Legend
+                      wrapperStyle={{ fontSize: 11, color: chart.axisLabel }}
+                      iconType="circle"
+                    />
                     <Bar
-                      dataKey="revenue"
-                      fill={chart.barAccent}
-                      radius={[0, 4, 4, 0]}
-                      barSize={12}
+                      dataKey="COGS"
+                      stackId="eg"
+                      fill={chart.barAlt}
+                      radius={[0, 0, 0, 0]}
+                      maxBarSize={22}
+                    />
+                    <Bar
+                      dataKey="Gastos"
+                      stackId="eg"
+                      fill={chart.lineMuted}
+                      maxBarSize={22}
+                    />
+                    <Bar
+                      dataKey="Defectuosos"
+                      stackId="eg"
+                      fill={chart.lineNegative}
+                      radius={[3, 3, 0, 0]}
+                      maxBarSize={22}
                     />
                   </BarChart>
                 </ResponsiveContainer>
@@ -721,194 +628,44 @@ export function DashboardView() {
         </div>
       </section>
 
-
-      {/* E · Operación */}
-      <section className="space-y-3">
-        <SectionHeader
-          title="Operación"
-          description="Panorama operativo sin salir del inicio."
-        />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <Card className="flex min-h-[188px] min-w-0 flex-col">
-            <CardHeader
-              eyebrow="Stock"
-              title="Crítico"
-              subtitle="Bajo mínimo o agotado"
-            />
-            <CardContent className="flex flex-1 flex-col px-5 pb-4 pt-0 sm:px-6">
-              <ul className="min-h-0 flex-1 space-y-2">
-                {[...outStock, ...lowStock].slice(0, 5).map((p) => {
-                  const isOut = stockStatus(p) === "agotado";
-                  return (
-                    <li
-                      key={p.id}
-                      className="flex items-center justify-between gap-2 text-[12px]"
-                    >
-                      <span className="min-w-0 truncate font-medium text-[var(--foreground)]">
-                        {p.name}
-                      </span>
-                      <span
-                        className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
-                          isOut
-                            ? "bg-[var(--danger-soft)] text-[var(--danger)]"
-                            : "bg-[var(--warning-soft)] text-[var(--warning)]"
-                        }`}
-                      >
-                        {p.stock}
-                      </span>
-                    </li>
-                  );
-                })}
-                {outStock.length === 0 && lowStock.length === 0 ? (
-                  <li className="text-[12px] text-[var(--foreground-muted)]">
-                    Sin alertas de stock.
-                  </li>
-                ) : null}
-              </ul>
-              <Link
-                href="/stock"
-                className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
-              >
-                Ver stock
-                <ChevronRight className="h-3 w-3" aria-hidden />
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="flex min-h-[188px] min-w-0 flex-col">
-            <CardHeader
-              eyebrow="Ventas"
-              title="Destacadas"
-              subtitle="Período actual"
-            />
-            <CardContent className="flex flex-1 flex-col px-5 pb-4 pt-0 sm:px-6">
-              {topProducts.length === 0 ? (
-                <p className="flex-1 text-[12px] text-[var(--foreground-muted)]">
-                  Sin ventas en el período.
-                </p>
-              ) : (
-                <ol className="min-h-0 flex-1 list-decimal space-y-1.5 pl-4 text-[12px] marker:text-[var(--foreground-muted)]">
-                  {topProducts.slice(0, 5).map((tp) => (
-                    <li
-                      key={tp.productId}
-                      className="pl-1 text-[var(--foreground)]"
-                    >
-                      <span className="font-medium">{tp.name}</span>
-                      <span className="ml-1 tabular-nums text-[var(--foreground-muted)]">
-                        {formatCurrency(tp.revenue)}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-              <Link
-                href="/ventas"
-                className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
-              >
-                Ver ventas
-                <ChevronRight className="h-3 w-3" aria-hidden />
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="flex min-h-[188px] min-w-0 flex-col">
-            <CardHeader
-              eyebrow="Calidad"
-              title="Defectuosos"
-              subtitle="Pérdida en el período"
-            />
-            <CardContent className="flex flex-1 flex-col justify-between px-5 pb-4 pt-0 sm:px-6">
-              <div>
-                <p className="text-lg font-semibold tabular-nums text-[var(--foreground-strong)] sm:text-xl">
-                  {formatCurrency(m.defectiveLoss)}
-                </p>
-                <p className="mt-1.5 text-[11.5px] leading-snug text-[var(--foreground-muted)]">
-                  {m.defectiveLoss > 0
-                    ? "Impacto en resultado del período."
-                    : "Sin registros en el período."}
-                </p>
-              </div>
-              <Link
-                href="/historial"
-                className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
-              >
-                Ver historial
-                <ChevronRight className="h-3 w-3" aria-hidden />
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="flex min-h-[188px] min-w-0 flex-col">
-            <CardHeader
-              eyebrow="Clientes"
-              title="Activos"
-              subtitle="Altas y mejor cliente"
-            />
-            <CardContent className="flex flex-1 flex-col px-5 pb-4 pt-0 sm:px-6">
-              <div className="flex flex-1 flex-col gap-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--foreground-subtle)]">
-                    Nuevos (30 días)
-                  </p>
-                  <p className="mt-0.5 text-lg font-semibold tabular-nums text-[var(--foreground-strong)]">
-                    {newCustomers}
-                  </p>
-                </div>
-                <div className="border-t border-[var(--border-subtle)] pt-2.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--foreground-subtle)]">
-                    Mejor cliente
-                  </p>
-                  {bestCustomers[0] ? (
-                    <>
-                      <p className="mt-1 truncate text-[12.5px] font-medium text-[var(--foreground)]">
-                        {bestCustomers[0].c.name}
-                      </p>
-                      <p className="text-[11.5px] tabular-nums text-[var(--foreground-muted)]">
-                        {formatCurrency(bestCustomers[0].totalSpent)}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-1 text-[12px] text-[var(--foreground-muted)]">
-                      —
-                    </p>
-                  )}
-                </div>
-              </div>
-              <Link
-                href="/clientes"
-                className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
-              >
-                Ver clientes
-                <ChevronRight className="h-3 w-3" aria-hidden />
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="flex min-h-[188px] min-w-0 flex-col">
-            <CardHeader
-              eyebrow="Inventario"
-              title="Valor al costo"
-              subtitle="Catálogo completo"
-            />
-            <CardContent className="flex flex-1 flex-col justify-between px-5 pb-4 pt-0 sm:px-6">
-              <div>
-                <p className="text-lg font-semibold tabular-nums text-[var(--foreground-strong)] sm:text-xl">
-                  {formatCurrency(inventoryValueAtCost)}
-                </p>
-                <p className="mt-1.5 text-[11.5px] leading-snug text-[var(--foreground-muted)]">
-                  Stock × costo de compra actual.
-                </p>
-              </div>
-              <Link
-                href="/stock"
-                className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
-              >
-                Ver inventario
-                <ChevronRight className="h-3 w-3" aria-hidden />
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
+      <section className="space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--foreground-subtle)]">
+          Operación
+        </p>
+        <Card className="bg-[var(--surface)] ring-1 ring-inset ring-[var(--border-subtle)]">
+          <CardContent className="flex flex-wrap gap-2 px-4 py-3 sm:px-5 sm:py-4">
+            <Link
+              href="/ventas"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-[12px] font-medium text-[var(--foreground)] hover:bg-[var(--surface)]"
+            >
+              Ventas
+            </Link>
+            <Link
+              href="/gastos"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-[12px] font-medium text-[var(--foreground)] hover:bg-[var(--surface)]"
+            >
+              Gastos
+            </Link>
+            <Link
+              href="/stock"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-[12px] font-medium text-[var(--foreground)] hover:bg-[var(--surface)]"
+            >
+              Stock
+            </Link>
+            <Link
+              href="/clientes"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-[12px] font-medium text-[var(--foreground)] hover:bg-[var(--surface)]"
+            >
+              Clientes
+            </Link>
+            <Link
+              href="/reportes"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-[12px] font-medium text-[var(--foreground)] hover:bg-[var(--surface)]"
+            >
+              Reportes
+            </Link>
+          </CardContent>
+        </Card>
       </section>
     </div>
   );
