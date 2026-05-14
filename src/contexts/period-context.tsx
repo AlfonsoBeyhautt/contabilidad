@@ -8,8 +8,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useAppData } from "@/contexts/data-context";
 import type { DateRange } from "@/lib/data/finance-calcs";
 import {
+  operationalBaselineRange,
   rangeFromPreset,
   type PeriodPreset,
 } from "@/lib/data/finance-calcs";
@@ -26,11 +28,20 @@ type PeriodContextValue = {
 const PeriodContext = createContext<PeriodContextValue | null>(null);
 
 export function PeriodProvider({ children }: { children: ReactNode }) {
-  const [preset, setPresetState] = useState<PeriodPreset>("este_mes");
+  const { data } = useAppData();
+  const [preset, setPresetState] = useState<PeriodPreset>("desde_operacion");
   const [customStart, setCustomStart] = useState<Date | null>(null);
   const [customEnd, setCustomEnd] = useState<Date | null>(null);
 
+  const baselineRange = useMemo(
+    () => operationalBaselineRange(data),
+    [data],
+  );
+
   const range = useMemo(() => {
+    if (preset === "desde_operacion") {
+      return baselineRange;
+    }
     if (preset === "personalizado" && customStart && customEnd) {
       return rangeFromPreset("personalizado", {
         start: customStart,
@@ -38,7 +49,7 @@ export function PeriodProvider({ children }: { children: ReactNode }) {
       });
     }
     return rangeFromPreset(preset);
-  }, [preset, customStart, customEnd]);
+  }, [preset, customStart, customEnd, baselineRange]);
 
   const setPreset = useCallback((p: PeriodPreset) => {
     setPresetState(p);

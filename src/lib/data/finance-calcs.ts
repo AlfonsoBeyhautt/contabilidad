@@ -119,9 +119,13 @@ export function periodMetrics(data: AppData, range: DateRange) {
     0,
   );
   const grossProfit = revenue - cogsFromSales;
-  const netProfit = grossProfit - expenseTotal - defectiveLoss;
+  /** Resultado operativo (antes de defectuosos): ingresos − COGS − gastos operativos. */
+  const operatingProfit = grossProfit - expenseTotal;
+  const netProfit = operatingProfit - defectiveLoss;
   const marginPct = revenue > 0 ? (netProfit / revenue) * 100 : 0;
   const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
+  const operatingMarginPct =
+    revenue > 0 ? (operatingProfit / revenue) * 100 : 0;
 
   return {
     revenue,
@@ -133,9 +137,11 @@ export function periodMetrics(data: AppData, range: DateRange) {
     /** Costo de unidades defectuosas en el período (no vendibles). */
     defectiveLoss,
     grossProfit,
+    operatingProfit,
     netProfit,
     marginPct,
     grossMarginPct,
+    operatingMarginPct,
     saleCount: sales.length,
     unitsSold: sales.reduce(
       (a, s) => a + s.lines.reduce((b, l) => b + l.quantity, 0),
@@ -169,6 +175,7 @@ export function compareToPreviousYear(range: DateRange): DateRange {
 }
 
 export type PeriodPreset =
+  | "desde_operacion"
   | "hoy"
   | "esta_semana"
   | "este_mes"
@@ -176,12 +183,61 @@ export type PeriodPreset =
   | "año_anterior"
   | "personalizado";
 
+/**
+ * Rango desde la fecha operativa más antigua detectada (productos, ventas,
+ * compras, gastos, clientes, defectuosos) hasta hoy. Si no hay datos, cae al
+ * mes calendario actual.
+ */
+export function operationalBaselineRange(
+  data: AppData,
+  now = new Date(),
+): DateRange {
+  const end = endOfDay(now);
+  const candidates: Date[] = [];
+
+  for (const s of data.sales ?? []) {
+    candidates.push(parseISODate(s.date));
+  }
+  for (const e of data.expenses ?? []) {
+    candidates.push(parseISODate(e.date));
+  }
+  for (const p of data.purchases ?? []) {
+    candidates.push(parseISODate(p.date));
+  }
+  for (const d of data.defectives ?? []) {
+    candidates.push(parseISODate(d.recordedAt));
+  }
+  for (const pr of data.products ?? []) {
+    candidates.push(parseISODate(pr.entryDate));
+  }
+  for (const f of data.productFamilies ?? []) {
+    candidates.push(parseISODate(f.entryDate));
+  }
+  for (const c of data.customers ?? []) {
+    candidates.push(parseISODate(c.registeredAt));
+  }
+
+  const valid = candidates.filter((d) => !Number.isNaN(d.getTime()));
+  if (valid.length === 0) {
+    return { start: startOfMonth(now), end };
+  }
+  const minTs = Math.min(...valid.map((d) => d.getTime()));
+  let start = startOfDay(new Date(minTs));
+  if (start.getTime() > end.getTime()) {
+    start = startOfMonth(now);
+  }
+  return { start, end };
+}
+
 export function rangeFromPreset(
   preset: PeriodPreset,
   custom?: { start: Date; end: Date },
   now = new Date(),
 ): DateRange {
   switch (preset) {
+    case "desde_operacion":
+      /** Sin `AppData` aquí: fallback conservador; el layout real usa `operationalBaselineRange`. */
+      return { start: startOfMonth(now), end: endOfDay(now) };
     case "hoy":
       return { start: startOfDay(now), end: endOfDay(now) };
     case "esta_semana":
@@ -499,6 +555,8 @@ export function periodMetricsWithProjections(
   expensesEmitted: number;
   expensesProjected: number;
   expensesProjectedExtra: number;
+  operatingProfitProjected: number;
+  operatingMarginPctProjected: number;
   netProfitProjected: number;
   marginPctProjected: number;
 } {
@@ -506,15 +564,20 @@ export function periodMetricsWithProjections(
   const breakdown = expensesForReportingPeriod(data, range);
   const expensesProjected = breakdown.total;
   const expensesProjectedExtra = breakdown.projectedTotal;
+  const operatingProfitProjected = base.grossProfit - expensesProjected;
   const netProfitProjected =
-    base.grossProfit - expensesProjected - base.defectiveLoss;
+    operatingProfitProjected - base.defectiveLoss;
   const marginPctProjected =
     base.revenue > 0 ? (netProfitProjected / base.revenue) * 100 : 0;
+  const operatingMarginPctProjected =
+    base.revenue > 0 ? (operatingProfitProjected / base.revenue) * 100 : 0;
   return {
     ...base,
     expensesEmitted: base.expenses,
     expensesProjected,
     expensesProjectedExtra,
+    operatingProfitProjected,
+    operatingMarginPctProjected,
     netProfitProjected,
     marginPctProjected,
   };

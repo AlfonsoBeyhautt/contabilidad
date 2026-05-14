@@ -25,15 +25,16 @@ function mapToScore(value: number, from: number, to: number): number {
 }
 
 function rentabilidad(metrics: ReturnType<typeof periodMetricsWithProjections>): HealthSubScore {
-  // Margen bruto pesa 40 %, margen neto 60 %.
-  const grossScore = mapToScore(metrics.grossMarginPct, 15, 60);
-  const netScore = mapToScore(metrics.marginPctProjected, -10, 35);
-  const score = Math.round(grossScore * 0.4 + netScore * 0.6);
+  // Margen neto proyectado domina (88 %); margen bruto solo matiza (12 %).
+  const grossScore = mapToScore(metrics.grossMarginPct, 12, 55);
+  const netMargin = metrics.marginPctProjected;
+  const netScore = mapToScore(netMargin, -12, 28);
+  const score = Math.round(grossScore * 0.12 + netScore * 0.88);
   return {
     id: "rentabilidad",
     label: "Rentabilidad",
     score,
-    rationale: `Margen bruto ${formatPercent(metrics.grossMarginPct)} · margen neto ${formatPercent(metrics.marginPctProjected)}.`,
+    rationale: `Margen bruto ${formatPercent(metrics.grossMarginPct)} · margen neto proyectado ${formatPercent(netMargin)}.`,
   };
 }
 
@@ -42,7 +43,6 @@ function crecimiento(
   prev: ReturnType<typeof periodMetricsWithProjections>,
   data: AppData,
 ): HealthSubScore {
-  // Considera variación vs período comparativo (50 %) + slope 6 meses (50 %).
   const revDeltaPct =
     prev.revenue > 0 ? ((cur.revenue - prev.revenue) / prev.revenue) * 100 : 0;
   const deltaScore = mapToScore(revDeltaPct, -20, 30);
@@ -50,11 +50,20 @@ function crecimiento(
   const avg = series.reduce((a, s) => a + s.revenue, 0) / Math.max(series.length, 1);
   const slopeNormalized = avg > 0
     ? series.length >= 2
-      ? ((series[series.length - 1].revenue - series[0].revenue) / Math.max(series[0].revenue, 1))
+      ? ((series[series.length - 1].revenue - series[0].revenue) /
+          Math.max(series[0].revenue, 1))
       : 0
     : 0;
   const slopeScore = mapToScore(slopeNormalized * 100, -25, 35);
-  const score = Math.round(deltaScore * 0.5 + slopeScore * 0.5);
+  let score = Math.round(deltaScore * 0.5 + slopeScore * 0.5);
+
+  // Con pérdida neta, el volumen de ventas no debe inflar el subscore.
+  if (cur.netProfitProjected < 0) {
+    score = Math.round(score * 0.42);
+  } else if (cur.marginPctProjected < 0) {
+    score = Math.round(score * 0.62);
+  }
+
   return {
     id: "crecimiento",
     label: "Crecimiento",
@@ -68,7 +77,6 @@ function eficiencia(
   data: AppData,
   current: DateRange,
 ): HealthSubScore {
-  // Gastos / ingresos (60 %) y defectuosos relativos (40 %).
   if (cur.revenue <= 0) {
     return {
       id: "eficiencia",
@@ -78,9 +86,9 @@ function eficiencia(
     };
   }
   const expensesPct = (cur.expensesProjected / cur.revenue) * 100;
-  const expensesScore = mapToScore(expensesPct, 60, 10); // menos % gastos = mejor
+  const expensesScore = mapToScore(expensesPct, 60, 10);
   const defPct = (cur.defectiveLoss / cur.revenue) * 100;
-  const defScore = mapToScore(defPct, 8, 0); // 0 % es ideal
+  const defScore = mapToScore(defPct, 8, 0);
   const recShare = recurrencesShareOfExpenses(data, current) * 100;
   const recScore = mapToScore(recShare, 80, 25);
   const score = Math.round(
@@ -107,9 +115,8 @@ function stock(data: AppData): HealthSubScore {
   const healthyPct = (sh.healthy / sh.totalProducts) * 100;
   const outPct = (sh.out / sh.totalProducts) * 100;
   const healthyScore = mapToScore(healthyPct, 40, 95);
-  const outScore = mapToScore(outPct, 20, 0); // menos % agotado mejor
+  const outScore = mapToScore(outPct, 20, 0);
 
-  // Stock muerto (rotación 0 ≥120d).
   const rotation = productRotation(data, 90);
   const dead = rotation.filter((r) => r.status === "muerto").length;
   const deadPct = (dead / sh.totalProducts) * 100;
@@ -130,8 +137,6 @@ function diversificacion(
   data: AppData,
   current: DateRange,
 ): HealthSubScore {
-  // Concentración: HHI normalizado del top-N en productos y clientes.
-  // Bajo HHI = mejor.
   const sales = data.sales.filter((s) => {
     const d = new Date(s.date);
     return d >= current.start && d <= current.end;
@@ -148,7 +153,6 @@ function diversificacion(
   if (totalRev > 0) {
     for (const v of prodRevenue.values()) prodHhi += (v / totalRev) ** 2;
   }
-  // HHI ∈ [0, 1]; queremos bajo. Mapeamos 1 → 0, 0.1 → 100.
   const prodScore = mapToScore(prodHhi, 0.7, 0.1);
 
   const custRevenue = new Map<string, number>();
@@ -199,8 +203,7 @@ function estabilidad(data: AppData): HealthSubScore {
   }
   const variance =
     revenues.reduce((a, v) => a + (v - mean) ** 2, 0) / revenues.length;
-  const cv = Math.sqrt(variance) / mean; // 0..∞
-  // CV alto = volátil. Mapeamos 0.6 → 0, 0.05 → 100.
+  const cv = Math.sqrt(variance) / mean;
   const score = Math.round(mapToScore(cv, 0.6, 0.05));
   return {
     id: "estabilidad",
@@ -210,13 +213,14 @@ function estabilidad(data: AppData): HealthSubScore {
   };
 }
 
+/** Rentabilidad real con mayor peso; crecimiento y diversificación más acotados. */
 const WEIGHTS: Record<HealthSubScore["id"], number> = {
-  rentabilidad: 0.25,
-  crecimiento: 0.2,
-  eficiencia: 0.15,
-  stock: 0.15,
-  diversificacion: 0.15,
-  estabilidad: 0.1,
+  rentabilidad: 0.44,
+  crecimiento: 0.12,
+  eficiencia: 0.2,
+  stock: 0.12,
+  diversificacion: 0.07,
+  estabilidad: 0.05,
 };
 
 function grade(score: number): HealthScore["grade"] {
@@ -225,6 +229,16 @@ function grade(score: number): HealthScore["grade"] {
   if (score >= 50) return "estable";
   if (score >= 35) return "atención";
   return "crítico";
+}
+
+function sustainedLossFactor(data: AppData): number {
+  const series = monthlySeries(data, 6);
+  const neg = series.filter((x) => x.netProfit < 0 && x.revenue > 0).length;
+  if (neg >= 5) return 0.52;
+  if (neg >= 4) return 0.66;
+  if (neg >= 3) return 0.8;
+  if (neg >= 2) return 0.92;
+  return 1;
 }
 
 export function buildHealthScore(
@@ -248,10 +262,18 @@ export function buildHealthScore(
     (a, c) => a + c.score * WEIGHTS[c.id],
     0,
   );
-  const score = Math.round(totalScore);
+  let score = Math.round(totalScore * sustainedLossFactor(data));
 
-  // Delta: comparar score contra el de un período anterior, calculado con sus datos.
-  // Para no doblar costo, lo aproximamos comparando rentabilidad y crecimiento.
+  if (cur.revenue > 0 && cur.marginPctProjected < 0) {
+    score = Math.min(score, Math.round(48 + Math.max(-18, cur.marginPctProjected) * 1.1));
+  }
+  if (cur.netProfitProjected < 0 && cur.revenue > 0) {
+    const depth = Math.min(1, Math.abs(cur.netProfitProjected) / cur.revenue);
+    score = Math.round(score * (1 - 0.38 * depth));
+  }
+
+  score = clamp(score, 0, 100);
+
   const prevApprox =
     rentabilidad(prev).score * (WEIGHTS.rentabilidad + WEIGHTS.eficiencia * 0.5) +
     crecimiento(prev, prev, data).score * (WEIGHTS.crecimiento + WEIGHTS.estabilidad * 0.5);

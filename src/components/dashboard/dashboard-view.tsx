@@ -13,24 +13,24 @@ import {
   CircleDollarSign,
   PackageX,
   PiggyBank,
+  Scale,
   ShoppingBag,
   Sparkles,
+  TrendingDown,
   TrendingUp,
   UserPlus,
   Wallet,
 } from "lucide-react";
 import {
-  Area,
-  Bar,
   CartesianGrid,
-  ComposedChart,
-  Legend,
   Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
   BarChart as RBarChart,
+  Bar,
 } from "recharts";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -45,7 +45,7 @@ import {
   filterSalesInRange,
   monthPreviousRange,
   parseISODate,
-  periodMetrics,
+  periodMetricsWithProjections,
   salesAggregatedByMonth,
   stockStatus,
   topProductsByRevenue,
@@ -60,7 +60,60 @@ function pctChange(current: number, previous: number): number {
   return ((current - previous) / previous) * 100;
 }
 
+function firstSentence(text: string): string {
+  const t = text.trim();
+  if (!t) return "";
+  const m = t.match(/^(.+?[.!?])(\s|$)/);
+  return m ? m[1].trim() : t;
+}
+
+function financeRiskPresentation(
+  m: ReturnType<typeof periodMetricsWithProjections>,
+): { label: string; hint: string; accent: "neutral" | "warning" | "negative" } {
+  if (m.revenue <= 0 && m.saleCount === 0) {
+    return {
+      label: "Sin actividad",
+      hint: "Registrá ventas para evaluar riesgo financiero.",
+      accent: "neutral",
+    };
+  }
+  if (m.netProfitProjected < 0 && m.marginPctProjected < -8) {
+    return {
+      label: "Crítico",
+      hint: "Pérdida neta profunda frente a los ingresos del período.",
+      accent: "negative",
+    };
+  }
+  if (m.netProfitProjected < 0) {
+    return {
+      label: "En pérdida",
+      hint: "Los gastos y costos superan el margen disponible.",
+      accent: "negative",
+    };
+  }
+  if (m.marginPctProjected < 3) {
+    return {
+      label: "Presión alta",
+      hint: "Margen neto muy ajustado; poca holgura ante shocks.",
+      accent: "warning",
+    };
+  }
+  if (m.marginPctProjected < 10) {
+    return {
+      label: "Moderado",
+      hint: "Resultado positivo con margen acotado.",
+      accent: "neutral",
+    };
+  }
+  return {
+    label: "Controlado",
+    hint: "Rentabilidad neta dentro de rangos sanos para el período.",
+    accent: "neutral",
+  };
+}
+
 const presetLabels: Record<string, string> = {
+  desde_operacion: "histórico operativo",
   hoy: "hoy",
   esta_semana: "esta semana",
   este_mes: "este mes",
@@ -86,22 +139,26 @@ export function DashboardView() {
   const { range, preset } = usePeriod();
   const chart = useChartColors();
 
-  const m = periodMetrics(data, range);
+  const m = periodMetricsWithProjections(data, range);
   const yoyRange = compareToPreviousYear(range);
-  const mYoy = periodMetrics(data, yoyRange);
+  const mYoy = periodMetricsWithProjections(data, yoyRange);
 
   const prevMonthRange = monthPreviousRange(range);
-  const mPrevMonth = periodMetrics(data, prevMonthRange);
+  const mPrevMonth = periodMetricsWithProjections(data, prevMonthRange);
 
   const revenueMomDelta =
     preset === "este_mes" ? pctChange(m.revenue, mPrevMonth.revenue) : null;
   const netMomDelta =
-    preset === "este_mes" ? pctChange(m.netProfit, mPrevMonth.netProfit) : null;
+    preset === "este_mes"
+      ? pctChange(m.netProfitProjected, mPrevMonth.netProfitProjected)
+      : null;
   const expensesMomDelta =
-    preset === "este_mes" ? pctChange(m.expenses, mPrevMonth.expenses) : null;
+    preset === "este_mes"
+      ? pctChange(m.expensesProjected, mPrevMonth.expensesProjected)
+      : null;
 
   const revenueYoyDelta = pctChange(m.revenue, mYoy.revenue);
-  const netYoyDelta = pctChange(m.netProfit, mYoy.netProfit);
+  const netYoyDelta = pctChange(m.netProfitProjected, mYoy.netProfitProjected);
   const grossYoyDelta = pctChange(m.grossProfit, mYoy.grossProfit);
 
   const salesInRange = useMemo(
@@ -128,22 +185,24 @@ export function DashboardView() {
     Ingresos: Math.round(row.revenue),
     "Ganancia bruta": Math.round(row.gross),
     Gastos: 0,
+    "Ganancia neta": 0,
   }));
 
   const expensesByMonth = Array.from({ length: 12 }, (_, i) => {
     const monthStart = new Date(year, i, 1);
     const monthEnd = new Date(year, i + 1, 0, 23, 59, 59);
     const r: DateRange = { start: monthStart, end: monthEnd };
-    const ex = periodMetrics(data, r).expenses;
-    return ex;
+    return periodMetricsWithProjections(data, r);
   });
   for (let i = 0; i < 12; i++) {
-    monthly[i].Gastos = Math.round(expensesByMonth[i] ?? 0);
+    const pm = expensesByMonth[i];
+    monthly[i].Gastos = Math.round(pm?.expensesProjected ?? 0);
+    monthly[i]["Ganancia neta"] = Math.round(pm?.netProfitProjected ?? 0);
   }
 
-  const chartMix = monthly.map((row) => ({
-    ...row,
-    "Ganancia neta": Math.round(row["Ganancia bruta"] - row.Gastos),
+  const chartNetMonthly = monthly.map((row) => ({
+    name: row.name,
+    "Ganancia neta": row["Ganancia neta"],
   }));
 
   const next7Days = upcomingPayments(data, 7);
@@ -158,6 +217,26 @@ export function DashboardView() {
     [data, range, preset],
   );
   const topInsight = intel.insights[0];
+
+  const executiveLine = useMemo(() => {
+    const p = intel.summary.paragraphs[0]?.trim();
+    if (p) return firstSentence(p);
+    if (m.revenue <= 0 && m.saleCount === 0) {
+      return "Sin ingresos en el período: el estado financiero no es evaluable con datos actuales.";
+    }
+    if (m.netProfitProjected < 0) {
+      return `El negocio opera con pérdida neta de ${formatCurrency(Math.abs(m.netProfitProjected))} y margen neto ${formatPercent(m.marginPctProjected)} frente a ingresos de ${formatCurrency(m.revenue)}.`;
+    }
+    return `El negocio mantiene resultado neto de ${formatCurrency(m.netProfitProjected)} con margen neto ${formatPercent(m.marginPctProjected)} sobre ingresos de ${formatCurrency(m.revenue)}.`;
+  }, [
+    intel.summary.paragraphs,
+    m.revenue,
+    m.saleCount,
+    m.netProfitProjected,
+    m.marginPctProjected,
+  ]);
+
+  const risk = financeRiskPresentation(m);
 
   const totalAlerts = lowStock.length + outStock.length + next7Days.length;
   const periodLabel = periodDescription(preset);
@@ -175,136 +254,223 @@ export function DashboardView() {
   );
 
   return (
-    <div className="space-y-10 pb-8">
-      {/* ── Hero stripe ─────────────────────────────────────────────────── */}
+    <div className="space-y-8 pb-8">
+      {/* ── Hero: estado → 3 KPI → waterfall → detalle ─────────────────── */}
       <section className="space-y-6 animate-rise">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--foreground-subtle)]">
             Panel ejecutivo · {periodLabel}
           </p>
           <h1 className="text-[28px] font-semibold tracking-tight text-[var(--foreground-strong)] sm:text-[32px]">
             {greeting()},{" "}
             <span className="text-[var(--foreground-muted)] font-medium">
-              acá está tu resumen.
+              estado financiero del negocio.
             </span>
           </h1>
-          <p className="max-w-3xl text-[13.5px] text-[var(--foreground-muted)]">
-            Indicadores clave del negocio, evolución mensual y atención
-            prioritaria. Cambiá el período desde la barra superior para
-            ajustar el alcance de los datos.
+          <blockquote className="max-w-4xl border-l-2 border-[var(--accent)] pl-4 text-[14px] font-medium leading-snug text-[var(--foreground-strong)]">
+            {executiveLine}
+          </blockquote>
+          <p className="max-w-3xl text-[13px] text-[var(--foreground-muted)]">
+            Prioridad: resultado neto, riesgo y resultado operativo. Ingresos y
+            margen bruto como contexto. Ajustá el período en la barra superior.
           </p>
         </div>
 
-        {/* Hero KPI cards (3 destacadas) */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard
-            size="hero"
-            accent="info"
-            label="Ingresos"
-            value={formatCurrency(m.revenue)}
-            hint={`${m.saleCount} ventas · ${Math.round(m.unitsSold)} uds.`}
-            icon={<TrendingUp className="h-4 w-4" aria-hidden />}
-            delta={{
-              value: revenueYoyDelta,
-              label: "vs año anterior",
-              neutralOnZero: true,
-            }}
-          />
-          <StatCard
-            size="hero"
-            accent="positive"
-            label="Ganancia neta"
-            value={formatCurrency(m.netProfit)}
-            hint={`Margen ${formatPercent(m.marginPct)}`}
-            icon={<PiggyBank className="h-4 w-4" aria-hidden />}
-            delta={{
-              value: netYoyDelta,
-              label: "vs año anterior",
-              neutralOnZero: true,
-            }}
-          />
-          <StatCard
-            size="hero"
-            accent="neutral"
-            label="Ganancia bruta"
-            value={formatCurrency(m.grossProfit)}
-            hint={formatPercent(m.grossMarginPct)}
-            icon={<BarChart3 className="h-4 w-4" aria-hidden />}
-            delta={{
-              value: grossYoyDelta,
-              label: "vs año anterior",
-              neutralOnZero: true,
-            }}
-          />
+        <div className="grid gap-4 lg:grid-cols-12">
+          <div className="lg:col-span-6">
+            <StatCard
+              size="hero"
+              prominence="primary"
+              accent={m.netProfitProjected >= 0 ? "positive" : "negative"}
+              financialStress={
+                m.netProfitProjected < 0
+                  ? "danger"
+                  : m.marginPctProjected < 3
+                    ? "warning"
+                    : "none"
+              }
+              label="Resultado neto (proyectado)"
+              value={formatCurrency(m.netProfitProjected)}
+              countUpAmount={m.netProfitProjected}
+              formatCountUp={formatCurrency}
+              hint={`Margen neto ${formatPercent(m.marginPctProjected)} · ${m.saleCount} ventas`}
+              icon={
+                m.netProfitProjected >= 0 ? (
+                  <PiggyBank className="h-4 w-4" aria-hidden />
+                ) : (
+                  <TrendingDown className="h-4 w-4" aria-hidden />
+                )
+              }
+              delta={{
+                value: netYoyDelta,
+                label: "vs año anterior",
+                neutralOnZero: true,
+              }}
+            />
+          </div>
+          <div className="lg:col-span-3">
+            <StatCard
+              size="hero"
+              prominence="secondary"
+              accent="neutral"
+              label="Resultado operativo"
+              value={formatCurrency(m.operatingProfitProjected)}
+              countUpAmount={m.operatingProfitProjected}
+              formatCountUp={formatCurrency}
+              hint={`Antes de defectuosos · margen op. ${formatPercent(m.operatingMarginPctProjected)}`}
+              icon={<BarChart3 className="h-4 w-4" aria-hidden />}
+            />
+          </div>
+          <div className="lg:col-span-3">
+            <StatCard
+              size="hero"
+              prominence="secondary"
+              accent={
+                risk.accent === "negative"
+                  ? "negative"
+                  : risk.accent === "warning"
+                    ? "warning"
+                    : "neutral"
+              }
+              financialStress={
+                risk.accent === "negative"
+                  ? "danger"
+                  : risk.accent === "warning"
+                    ? "warning"
+                    : "none"
+              }
+              label="Nivel de riesgo financiero"
+              value={risk.label}
+              hint={risk.hint}
+              icon={<Scale className="h-4 w-4" aria-hidden />}
+            />
+          </div>
         </div>
 
-        {/* Secondary KPI strip */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="Costo de mercadería"
-            value={formatCurrency(m.cogsSales)}
-            hint="COGS de las ventas del período"
-            icon={<ShoppingBag className="h-4 w-4" aria-hidden />}
-          />
-          <StatCard
-            label="Gastos operativos"
-            value={formatCurrency(m.expenses)}
-            hint="No incluye compras de stock"
-            icon={<Wallet className="h-4 w-4" aria-hidden />}
-            delta={
-              expensesMomDelta !== null
-                ? {
-                    value: expensesMomDelta,
-                    label: "vs mes anterior",
-                    neutralOnZero: true,
-                  }
-                : undefined
-            }
-          />
-          <StatCard
-            label="Pérdida por defectuosos"
-            value={formatCurrency(m.defectiveLoss)}
-            hint="Costo de unidades no vendibles"
-            icon={<AlertTriangle className="h-4 w-4" aria-hidden />}
-            accent={m.defectiveLoss > 0 ? "warning" : "neutral"}
-          />
-          <StatCard
-            label="Margen neto"
-            value={formatPercent(m.marginPct)}
-            hint="Neto / ingresos"
-            icon={<CircleDollarSign className="h-4 w-4" aria-hidden />}
-            delta={
-              revenueMomDelta !== null && netMomDelta !== null
-                ? {
-                    value: netMomDelta,
-                    label: "vs mes anterior",
-                    neutralOnZero: true,
-                  }
-                : undefined
-            }
-          />
-        </div>
+        <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-[var(--shadow-sm)]">
+          <div className="border-b border-[var(--border-subtle)] px-5 py-4 sm:px-6">
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--foreground-subtle)]">
+              Construcción del resultado
+            </p>
+            <p className="mt-1 text-[15px] font-semibold tracking-tight text-[var(--foreground-strong)]">
+              De ingresos al resultado neto
+            </p>
+            <p className="mt-0.5 text-[12.5px] text-[var(--foreground-muted)]">
+              Secuencia ejecutiva: ingresos → costo de mercadería → gastos
+              operativos → defectuosos → resultado neto.
+            </p>
+          </div>
+          <div className="px-5 py-5 sm:px-6">
+            <FinancialWaterfall m={m} />
+          </div>
+        </Card>
+
+        <details className="group rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] px-4 py-3 sm:px-5">
+          <summary className="cursor-pointer list-none text-[13px] font-semibold text-[var(--foreground-strong)] outline-none marker:content-none [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex items-center gap-2">
+              <CircleDollarSign className="h-4 w-4 text-[var(--foreground-muted)]" aria-hidden />
+              Detalle comercial y de márgenes
+              <ChevronRight className="h-4 w-4 text-[var(--foreground-muted)] transition-transform group-open:rotate-90" aria-hidden />
+            </span>
+          </summary>
+          <div className="mt-4 grid gap-3 border-t border-[var(--border-subtle)] pt-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="Ingresos"
+              value={formatCurrency(m.revenue)}
+              hint={`${m.saleCount} ventas · ${Math.round(m.unitsSold)} uds.`}
+              icon={<TrendingUp className="h-4 w-4" aria-hidden />}
+              accent="info"
+              delta={{
+                value: revenueYoyDelta,
+                label: "vs año anterior",
+                neutralOnZero: true,
+              }}
+            />
+            <StatCard
+              label="Ganancia bruta"
+              value={formatCurrency(m.grossProfit)}
+              hint={formatPercent(m.grossMarginPct)}
+              icon={<BarChart3 className="h-4 w-4" aria-hidden />}
+              accent="neutral"
+              delta={{
+                value: grossYoyDelta,
+                label: "vs año anterior",
+                neutralOnZero: true,
+              }}
+            />
+            <StatCard
+              label="Costo de mercadería (COGS)"
+              value={formatCurrency(m.cogsSales)}
+              hint="Costo reconocido por ventas"
+              icon={<ShoppingBag className="h-4 w-4" aria-hidden />}
+            />
+            <StatCard
+              label="Gastos operativos (proyectados)"
+              value={formatCurrency(m.expensesProjected)}
+              hint={`Emitidos ${formatCurrency(m.expensesEmitted)}`}
+              icon={<Wallet className="h-4 w-4" aria-hidden />}
+              delta={
+                expensesMomDelta !== null
+                  ? {
+                      value: expensesMomDelta,
+                      label: "vs mes anterior",
+                      neutralOnZero: true,
+                    }
+                  : undefined
+              }
+            />
+            <StatCard
+              label="Defectuosos"
+              value={formatCurrency(m.defectiveLoss)}
+              hint="Pérdida por unidades no vendibles"
+              icon={<AlertTriangle className="h-4 w-4" aria-hidden />}
+              accent={m.defectiveLoss > 0 ? "warning" : "neutral"}
+            />
+            <StatCard
+              label="Margen neto proyectado"
+              value={formatPercent(m.marginPctProjected)}
+              hint="Sobre ingresos del período"
+              icon={<CircleDollarSign className="h-4 w-4" aria-hidden />}
+              delta={
+                revenueMomDelta !== null && netMomDelta !== null
+                  ? {
+                      value: netMomDelta,
+                      label: "vs mes anterior",
+                      neutralOnZero: true,
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        </details>
       </section>
 
-      {/* ── Acceso a Inteligencia · sutil, no invasivo ─────────────────── */}
+      {/* ── Inteligencia del negocio ───────────────────────────────────── */}
       <section>
         <Link
           href="/inteligencia"
-          className="group block rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 transition-shadow hover:shadow-[var(--shadow-sm)] sm:p-6"
+          className="group block rounded-2xl border border-[color-mix(in_oklab,var(--accent)_28%,var(--border))] bg-[color-mix(in_oklab,var(--accent-soft)_35%,var(--surface))] p-5 shadow-[var(--shadow-sm)] transition-all duration-300 hover:border-[color-mix(in_oklab,var(--accent)_45%,var(--border))] hover:shadow-md sm:p-7"
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3 sm:items-center">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
-                <Brain className="h-4 w-4" aria-hidden />
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--surface)] text-[var(--accent)] ring-1 ring-inset ring-[var(--border)] transition-transform duration-300 group-hover:scale-[1.03]">
+                <Brain className="h-5 w-5" aria-hidden />
               </span>
               <div className="min-w-0">
                 <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--foreground-subtle)]">
-                  Inteligencia del negocio
+                  Centro de inteligencia del negocio
                 </p>
-                <p className="mt-0.5 text-[14px] font-semibold tracking-tight text-[var(--foreground-strong)]">
-                  Salud del negocio: {intel.health.score} / 100 ·{" "}
+                <p className="mt-0.5 text-[15px] font-semibold tracking-tight text-[var(--foreground-strong)]">
+                  Health score {intel.health.score}/100 ·{" "}
                   <span className="capitalize text-[var(--foreground-muted)]">
                     {intel.health.grade}
+                  </span>
+                  <span className="mx-2 text-[var(--foreground-subtle)]">·</span>
+                  <span className="text-[13px] font-medium text-[var(--foreground-muted)]">
+                    Estado financiero:{" "}
+                    <span className="text-[var(--foreground-strong)]">
+                      {risk.label}
+                    </span>
                   </span>
                 </p>
                 {topInsight ? (
@@ -313,13 +479,13 @@ export function DashboardView() {
                   </p>
                 ) : (
                   <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-[var(--foreground-muted)]">
-                    Generá un análisis ejecutivo automático del período actual.
+                    Análisis ejecutivo, riesgos y oportunidades del período.
                   </p>
                 )}
               </div>
             </div>
-            <span className="inline-flex items-center gap-1 self-start rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-medium text-[var(--foreground)] transition-colors group-hover:bg-[var(--surface-muted)] sm:self-auto">
-              Abrir centro de análisis
+            <span className="inline-flex items-center gap-1 self-start rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12px] font-medium text-[var(--foreground)] transition-colors group-hover:bg-[var(--surface-muted)] sm:self-auto">
+              Abrir análisis estratégico
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
             </span>
           </div>
@@ -327,8 +493,22 @@ export function DashboardView() {
       </section>
 
       {/* ── Atención prioritaria ────────────────────────────────────────── */}
-      {totalAlerts > 0 ? (
+      {(totalAlerts > 0 || m.netProfitProjected < 0) ? (
         <section className="space-y-4">
+          {m.netProfitProjected < 0 ? (
+            <div className="rounded-2xl border border-[color-mix(in_oklab,var(--danger)_35%,transparent)] bg-[color-mix(in_oklab,var(--danger-soft)_55%,transparent)] px-5 py-4 text-[13px] leading-relaxed text-[var(--foreground-strong)] sm:px-6">
+              <p className="font-semibold text-[var(--danger)]">
+                Pérdida neta en el período
+              </p>
+              <p className="mt-1 text-[var(--foreground)]">
+                El resultado neto proyectado es {formatCurrency(m.netProfitProjected)} (
+                {formatPercent(m.marginPctProjected)} sobre ingresos). Revisá gastos,
+                precios y mix antes de priorizar solo el volumen de ventas.
+              </p>
+            </div>
+          ) : null}
+          {totalAlerts > 0 ? (
+            <>
           <SectionHeader
             eyebrow="Atención prioritaria"
             title="Qué necesita revisión"
@@ -401,43 +581,31 @@ export function DashboardView() {
               empty={m.defectiveLoss === 0}
             />
           </div>
+            </>
+          ) : null}
         </section>
       ) : null}
 
       {/* ── Evolución y top productos ───────────────────────────────────── */}
       <section className="space-y-4">
         <SectionHeader
-          eyebrow="Performance"
-          title="Evolución del negocio"
-          description={`Comparativa mensual de ingresos, gastos y ganancia neta durante ${year}. Los topes se calculan con datos cerrados de cada mes.`}
+          eyebrow="Tendencia"
+          title="Evolución del resultado neto mensual"
+          description={`Sólo línea temporal (proyectado por mes, incluye recurrencias) · año ${year}. La pregunta que responde: ¿cómo cerró el resultado neto cada mes?`}
         />
         <div className="grid gap-6 xl:grid-cols-5">
           <Card className="xl:col-span-3">
             <CardHeader
               eyebrow="Mensual"
-              title="Ingresos, gastos y ganancia neta"
-              subtitle={`Acumulado mensual · ${year}`}
+              title="Resultado neto por mes"
+              subtitle={`Año calendario ${year} · proyección de gastos`}
             />
-            <CardContent className="h-[320px] pl-2 pr-4 pt-3">
+            <CardContent className="h-[300px] min-h-[280px] min-w-0 pl-2 pr-4 pt-3">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={chartMix}
+                <LineChart
+                  data={chartNetMonthly}
                   margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
                 >
-                  <defs>
-                    <linearGradient id="grad-revenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="0%"
-                        stopColor={chart.areaPrimaryTop}
-                        stopOpacity={1}
-                      />
-                      <stop
-                        offset="100%"
-                        stopColor={chart.areaPrimaryBottom}
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid
                     vertical={false}
                     stroke={chart.grid}
@@ -467,39 +635,18 @@ export function DashboardView() {
                       v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`
                     }
                   />
-                  <Tooltip content={<ChartTooltip />} cursor={{ fill: chart.grid, opacity: 0.35 }} />
-                  <Legend
-                    iconType="circle"
-                    wrapperStyle={{
-                      fontSize: 12,
-                      color: chart.axisLabel,
-                      paddingTop: 8,
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="Ingresos"
-                    stroke={chart.lineAccent}
-                    strokeWidth={2}
-                    fill="url(#grad-revenue)"
-                    fillOpacity={1}
-                  />
-                  <Bar
-                    dataKey="Gastos"
-                    fill={chart.lineMuted}
-                    radius={[4, 4, 0, 0]}
-                    barSize={14}
-                    fillOpacity={0.55}
-                  />
+                  <Tooltip content={<ChartTooltip />} cursor={{ stroke: chart.grid, strokeWidth: 1, strokeDasharray: "4 4" }} />
                   <Line
                     type="monotone"
                     dataKey="Ganancia neta"
-                    stroke={chart.linePositive}
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4 }}
+                    stroke={chart.lineAccent}
+                    strokeWidth={2.5}
+                    dot={{ r: 3, fill: chart.lineAccent, strokeWidth: 0 }}
+                    activeDot={{ r: 5 }}
+                    isAnimationActive
+                    animationDuration={700}
                   />
-                </ComposedChart>
+                </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
@@ -561,6 +708,8 @@ export function DashboardView() {
                       fill={chart.barAccent}
                       radius={[0, 6, 6, 0]}
                       barSize={14}
+                      isAnimationActive
+                      animationDuration={650}
                     />
                   </RBarChart>
                 </ResponsiveContainer>
@@ -728,6 +877,113 @@ export function DashboardView() {
 /* ────────────────────────────────────────────────────────────────────── */
 /*  Subcomponentes internos del dashboard                                 */
 /* ────────────────────────────────────────────────────────────────────── */
+
+function FinancialWaterfall({
+  m,
+}: {
+  m: ReturnType<typeof periodMetricsWithProjections>;
+}) {
+  const steps: {
+    key: string;
+    label: string;
+    sub: string;
+    amount: number;
+  }[] = [
+    {
+      key: "rev",
+      label: "Ingresos",
+      sub: "Facturación del período",
+      amount: m.revenue,
+    },
+    {
+      key: "cogs",
+      label: "Costo de mercadería (COGS)",
+      sub: "Costo reconocido por ventas",
+      amount: -m.cogsSales,
+    },
+    {
+      key: "opex",
+      label: "Gastos operativos (proyectados)",
+      sub: "Incluye recurrencias aún no emitidas",
+      amount: -m.expensesProjected,
+    },
+    {
+      key: "def",
+      label: "Defectuosos",
+      sub: "Pérdida por unidades no vendibles",
+      amount: -m.defectiveLoss,
+    },
+    {
+      key: "net",
+      label: "Resultado neto",
+      sub: "Saldo final del período (proyectado)",
+      amount: m.netProfitProjected,
+    },
+  ];
+
+  const maxAbs = Math.max(
+    m.revenue,
+    m.cogsSales,
+    m.expensesProjected,
+    m.defectiveLoss,
+    Math.abs(m.netProfitProjected),
+    1,
+  );
+
+  return (
+    <div className="space-y-1">
+      {steps.map((s, i) => {
+        const w = (Math.abs(s.amount) / maxAbs) * 100;
+        const isNet = s.key === "net";
+        const isNeg = s.amount < 0;
+        return (
+          <div key={s.key}>
+            <div className="flex flex-wrap items-start justify-between gap-3 py-3 sm:py-3.5">
+              <div className="min-w-0 flex-1">
+                <p
+                  className={`text-[13px] font-semibold tracking-tight ${
+                    isNet ? "text-[var(--foreground-strong)]" : "text-[var(--foreground)]"
+                  }`}
+                >
+                  {s.label}
+                </p>
+                <p className="mt-0.5 text-[11.5px] text-[var(--foreground-muted)]">
+                  {s.sub}
+                </p>
+                <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[var(--surface-muted)] ring-1 ring-inset ring-[var(--border-subtle)]">
+                  <div
+                    className={`h-full rounded-full transition-[width] duration-700 ease-out ${
+                      isNeg
+                        ? "bg-[color-mix(in_oklab,var(--danger)_75%,transparent)]"
+                        : isNet && s.amount >= 0
+                          ? "bg-[var(--success)]"
+                          : "bg-[var(--accent)]"
+                    }`}
+                    style={{ width: `${Math.max(3, Math.min(100, w))}%` }}
+                  />
+                </div>
+              </div>
+              <p
+                className={`shrink-0 text-right text-[14px] font-semibold tabular-nums tracking-tight ${
+                  isNeg
+                    ? "text-[var(--danger)]"
+                    : isNet && s.amount >= 0
+                      ? "text-[var(--success)]"
+                      : "text-[var(--foreground-strong)]"
+                }`}
+              >
+                {formatCurrency(s.amount)}
+              </p>
+            </div>
+            {i < steps.length - 1 ? (
+              <div className="h-px bg-[var(--border-subtle)]" aria-hidden />
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 type AlertTone = "info" | "warning" | "danger" | "neutral";
 

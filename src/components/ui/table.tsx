@@ -64,7 +64,7 @@ export function TH({
   const a = align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
   return (
     <th
-      className={`whitespace-nowrap px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] ${a} ${className}`}
+      className={`whitespace-nowrap px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] ${a} ${className}`}
       {...rest}
     >
       {children}
@@ -83,7 +83,7 @@ export function TD({
   const a = align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
   return (
     <td
-      className={`whitespace-nowrap px-3 py-2.5 ${a} ${className}`}
+      className={`whitespace-nowrap px-4 py-3.5 ${a} ${className}`}
       {...rest}
     >
       {children}

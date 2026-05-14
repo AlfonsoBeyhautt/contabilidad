@@ -16,17 +16,14 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAppData } from "@/contexts/data-context";
 import {
+  operationalBaselineRange,
   rangeFromPreset,
   type DateRange,
   type PeriodPreset,
 } from "@/lib/data/finance-calcs";
 import {
   endOfDay,
-  endOfMonth,
-  endOfYear,
   startOfDay,
-  startOfMonth,
-  startOfYear,
 } from "date-fns";
 import {
   generateAnnualReport,
@@ -39,6 +36,7 @@ import {
 import { monthLabel, rangeLabel } from "@/lib/pdf/foundation";
 
 const PRESET_LABELS: Record<PeriodPreset, string> = {
+  desde_operacion: "Desde inicio operativo",
   hoy: "Hoy",
   esta_semana: "Esta semana",
   este_mes: "Este mes",
@@ -46,6 +44,16 @@ const PRESET_LABELS: Record<PeriodPreset, string> = {
   "año_anterior": "Año anterior",
   personalizado: "Personalizado",
 };
+
+const REPORT_PRESET_ORDER: PeriodPreset[] = [
+  "desde_operacion",
+  "hoy",
+  "esta_semana",
+  "este_mes",
+  "este_año",
+  "año_anterior",
+  "personalizado",
+];
 
 const MONTHS_ES = [
   "Enero",
@@ -68,7 +76,7 @@ export function ReportesView() {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
-  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("este_mes");
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("desde_operacion");
   const [customStart, setCustomStart] = useState<string>(
     () => new Date(currentYear, currentMonth - 1, 1).toISOString().slice(0, 10),
   );
@@ -87,8 +95,11 @@ export function ReportesView() {
       const end = endOfDay(new Date(`${customEnd}T12:00:00`));
       return rangeFromPreset("personalizado", { start, end });
     }
+    if (periodPreset === "desde_operacion") {
+      return operationalBaselineRange(data);
+    }
     return rangeFromPreset(periodPreset);
-  }, [periodPreset, customStart, customEnd]);
+  }, [periodPreset, customStart, customEnd, data]);
 
   const periodLabelText = useMemo(() => {
     if (periodPreset === "este_mes") {
@@ -150,7 +161,7 @@ export function ReportesView() {
         />
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            {(Object.keys(PRESET_LABELS) as PeriodPreset[]).map((p) => (
+            {REPORT_PRESET_ORDER.map((p) => (
               <button
                 key={p}
                 type="button"

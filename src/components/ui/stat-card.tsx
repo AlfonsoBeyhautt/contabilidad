@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Card } from "./card";
+import { useCountUp } from "@/hooks/use-count-up";
 
 type Trend = { label: string; positive?: boolean };
 
@@ -24,9 +25,20 @@ type StatCardProps = {
    */
   size?: "default" | "hero";
   /**
+   * Jerarquía visual entre KPIs del mismo tamaño.
+   */
+  prominence?: "primary" | "secondary";
+  /**
    * Acento muy sutil en el ícono / pill. No genera ruido visual.
    */
   accent?: "neutral" | "positive" | "negative" | "info" | "warning";
+  /**
+   * Énfasis de borde/fondo para estados financieros adversos (controlado).
+   */
+  financialStress?: "none" | "warning" | "danger";
+  /** Valor numérico para animación count-up; requiere `formatCountUp`. */
+  countUpAmount?: number;
+  formatCountUp?: (n: number) => string;
 };
 
 function deltaToneClasses(positive?: boolean) {
@@ -53,6 +65,18 @@ function accentClasses(accent: NonNullable<StatCardProps["accent"]>) {
   }
 }
 
+function stressClasses(stress: NonNullable<StatCardProps["financialStress"]>) {
+  switch (stress) {
+    case "danger":
+      return "ring-1 ring-inset ring-[color-mix(in_oklab,var(--danger)_35%,transparent)] bg-[color-mix(in_oklab,var(--danger-soft)_55%,transparent)]";
+    case "warning":
+      return "ring-1 ring-inset ring-[color-mix(in_oklab,var(--warning)_32%,transparent)] bg-[color-mix(in_oklab,var(--warning-soft)_45%,transparent)]";
+    case "none":
+    default:
+      return "";
+  }
+}
+
 export function StatCard({
   label,
   value,
@@ -61,11 +85,25 @@ export function StatCard({
   delta,
   icon,
   size = "default",
+  prominence = "primary",
   accent = "neutral",
+  financialStress = "none",
+  countUpAmount,
+  formatCountUp,
 }: StatCardProps) {
   const isHero = size === "hero";
+  const stress = stressClasses(financialStress);
+  const useAnimation = countUpAmount !== undefined && formatCountUp != null;
+  const animated = useCountUp(useAnimation ? countUpAmount : 0, 950, useAnimation);
+  const displayValue = useAnimation ? formatCountUp(animated) : value;
+  const valueClass = isHero
+    ? prominence === "secondary"
+      ? "text-2xl sm:text-[1.85rem]"
+      : "text-3xl sm:text-[2.35rem]"
+    : "text-[26px] sm:text-[28px]";
+
   return (
-    <Card className="overflow-hidden">
+    <Card className={`group overflow-hidden ${stress}`}>
       <div
         className={`flex flex-col gap-4 px-5 ${
           isHero ? "py-6 sm:px-7 sm:py-8" : "py-5 sm:px-6 sm:py-5"
@@ -77,7 +115,7 @@ export function StatCard({
           </p>
           {icon ? (
             <span
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${accentClasses(
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 hover:scale-[1.04] ${accentClasses(
                 accent,
               )}`}
               aria-hidden
@@ -89,11 +127,9 @@ export function StatCard({
 
         <div className="space-y-1.5">
           <p
-            className={`truncate font-semibold tabular-nums tracking-tight text-[var(--foreground-strong)] ${
-              isHero ? "text-3xl sm:text-4xl" : "text-[26px] sm:text-[28px]"
-            }`}
+            className={`truncate font-semibold tabular-nums tracking-tight text-[var(--foreground-strong)] ${valueClass}`}
           >
-            {value}
+            {displayValue}
           </p>
           {hint ? (
             <p className="text-[12px] leading-relaxed text-[var(--foreground-muted)]">

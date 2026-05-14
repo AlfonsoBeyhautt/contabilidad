@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAppData } from "@/contexts/data-context";
 import { stockStatus } from "@/lib/data/finance-calcs";
+import { productRotation } from "@/lib/intelligence/metrics";
 import type { ProductVariantInput } from "@/contexts/data-context";
 import type { Product, ProductCategory, ProductFamily } from "@/lib/data/types";
 import {
@@ -19,7 +20,7 @@ import {
   sizeStockRowsFromProduct,
   stockMapFromSizeRows,
 } from "@/lib/data/stock-helpers";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
 
 const categories: ProductCategory[] = [
   "Remeras",
@@ -75,6 +76,43 @@ export function ProductosView() {
     null,
   );
   const [showCostosHint, setShowCostosHint] = useState(false);
+
+  const inventoryIntel = useMemo(() => {
+    const pmap = new Map(data.products.map((p) => [p.id, p]));
+    const byId = new Map<string, { name: string; gross: number }>();
+    for (const s of data.sales) {
+      for (const l of s.lines) {
+        const rev = Math.max(0, l.quantity * l.unitPrice - l.discount);
+        const cogs = (s.costSnapshot[l.productId] ?? 0) * l.quantity;
+        const g = rev - cogs;
+        const name = pmap.get(l.productId)?.name ?? l.productId;
+        const cur = byId.get(l.productId) ?? { name, gross: 0 };
+        cur.gross += g;
+        byId.set(l.productId, cur);
+      }
+    }
+    let best: { name: string; gross: number } | null = null;
+    for (const v of byId.values()) {
+      if (!best || v.gross > best.gross) best = { name: v.name, gross: v.gross };
+    }
+    const rot = productRotation(data, 90);
+    const immobile = [...rot]
+      .filter(
+        (r) =>
+          (r.status === "muerto" || r.status === "lento") && r.stock > 0,
+      )
+      .sort((a, b) => b.capitalLocked - a.capitalLocked)[0];
+    const fastest = [...rot]
+      .filter((r) => r.unitsSold > 0)
+      .sort((a, b) => b.unitsSold - a.unitsSold)[0];
+    const worst = [...rot]
+      .filter((r) => r.revenue > 0)
+      .sort((a, b) => a.marginPct - b.marginPct)[0];
+    const alerts = data.products.filter(
+      (p) => stockStatus(p) === "bajo" || stockStatus(p) === "agotado",
+    ).length;
+    return { best, immobile, fastest, worst, alerts };
+  }, [data]);
 
   const grouped = useMemo(() => {
     const rows = data.productFamilies.map((family) => {
@@ -132,6 +170,68 @@ export function ProductosView() {
           </button>
         </div>
       ) : null}
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {(
+          [
+            {
+              title: "Mayor margen bruto (hist.)",
+              primary: inventoryIntel.best?.name ?? "—",
+              secondary: inventoryIntel.best
+                ? formatCurrency(inventoryIntel.best.gross)
+                : "Sin ventas cargadas",
+            },
+            {
+              title: "Stock inmovilizado",
+              primary: inventoryIntel.immobile?.product.name ?? "—",
+              secondary: inventoryIntel.immobile
+                ? `${formatCurrency(inventoryIntel.immobile.capitalLocked)} · ${inventoryIntel.immobile.stock} uds`
+                : "Sin señales",
+            },
+            {
+              title: "Mayor rotación (90 días)",
+              primary: inventoryIntel.fastest?.product.name ?? "—",
+              secondary: inventoryIntel.fastest
+                ? `${inventoryIntel.fastest.unitsSold} uds vendidas`
+                : "—",
+            },
+            {
+              title: "Peor margen bruto (90 días)",
+              primary: inventoryIntel.worst?.product.name ?? "—",
+              secondary: inventoryIntel.worst
+                ? formatPercent(inventoryIntel.worst.marginPct)
+                : "—",
+            },
+            {
+              title: "Alertas de stock",
+              primary:
+                inventoryIntel.alerts === 0
+                  ? "Sin alertas"
+                  : `${inventoryIntel.alerts} SKU`,
+              secondary:
+                inventoryIntel.alerts === 0
+                  ? "Todo sobre mínimos"
+                  : "Bajo o agotado",
+            },
+          ] as const
+        ).map((cell) => (
+          <div
+            key={cell.title}
+            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] px-4 py-3.5 shadow-[var(--shadow-sm)]"
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--foreground-subtle)]">
+              {cell.title}
+            </p>
+            <p className="mt-2 truncate text-[13px] font-semibold text-[var(--foreground-strong)]">
+              {cell.primary}
+            </p>
+            <p className="mt-1 text-[11.5px] text-[var(--foreground-muted)]">
+              {cell.secondary}
+            </p>
+          </div>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center justify-end gap-3">
         <div className="mr-auto flex flex-wrap gap-2 text-xs">
           <span className="self-center text-[var(--foreground-muted)]">Stock:</span>

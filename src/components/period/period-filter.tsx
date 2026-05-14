@@ -5,6 +5,7 @@ import type { PeriodPreset } from "@/lib/data/finance-calcs";
 import { Input, Select } from "@/components/ui/field";
 
 const labels: Record<PeriodPreset, string> = {
+  desde_operacion: "Desde inicio operativo",
   hoy: "Hoy",
   esta_semana: "Esta semana",
   este_mes: "Este mes",
@@ -12,6 +13,16 @@ const labels: Record<PeriodPreset, string> = {
   año_anterior: "Año anterior",
   personalizado: "Personalizado",
 };
+
+const PRESET_ORDER: PeriodPreset[] = [
+  "desde_operacion",
+  "hoy",
+  "esta_semana",
+  "este_mes",
+  "este_año",
+  "año_anterior",
+  "personalizado",
+];
 
 export function PeriodFilter() {
   const { preset, setPreset, customStart, customEnd, setCustomRange } =
@@ -27,7 +38,7 @@ export function PeriodFilter() {
         onChange={(e) => setPreset(e.target.value as PeriodPreset)}
         className="min-w-[150px]"
       >
-        {(Object.keys(labels) as PeriodPreset[]).map((k) => (
+        {PRESET_ORDER.map((k) => (
           <option key={k} value={k}>
             {labels[k]}
           </option>
