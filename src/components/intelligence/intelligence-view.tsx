@@ -22,10 +22,12 @@ import { useAppData } from "@/contexts/data-context";
 import { usePeriod } from "@/contexts/period-context";
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { buildIntelligenceReport } from "@/lib/intelligence";
+import { buildBusinessContextForAI } from "@/lib/intelligence/ai-business-context";
 import type {
   Insight,
   IntelligenceReport,
 } from "@/lib/intelligence/types";
+import { BusinessAnalystPanel } from "./business-analyst-panel";
 import { InsightCard } from "./insight-card";
 import { HealthRing } from "./health-ring";
 
@@ -132,6 +134,20 @@ export function IntelligenceView() {
       }),
     [data, range, preset],
   );
+
+  const businessContextForAi = useMemo(
+    () =>
+      buildBusinessContextForAI({
+        data,
+        periodRange: range,
+        periodPreset: preset,
+        periodLabel: presetLabels[preset] ?? "Período seleccionado",
+        report,
+      }),
+    [data, range, preset, report],
+  );
+
+  const analystPanelKey = `${range.start.getTime()}-${range.end.getTime()}-${preset}`;
 
   const priorityInsights = useMemo(
     () => report.insights.slice(0, 3),
@@ -342,6 +358,18 @@ export function IntelligenceView() {
             ) : null}
           </CardContent>
         </Card>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeader
+          eyebrow="Consulta ejecutiva"
+          title="Analista empresarial"
+          description="Preguntas puntuales sobre el mismo período y motor de métricas que el informe. Requiere OPENAI_API_KEY en el servidor (nunca en el cliente)."
+        />
+        <BusinessAnalystPanel
+          key={analystPanelKey}
+          businessContext={businessContextForAi}
+        />
       </section>
 
       {/* ── KPIs críticos (solo 3) ────────────────────────────────────── */}

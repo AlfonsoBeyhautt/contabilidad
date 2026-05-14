@@ -17,6 +17,8 @@ cp .env.example .env.local
 
 2. Completar los valores en `.env.local` con tus credenciales de Supabase.
 
+3. **Analista empresarial (OpenAI, opcional):** agregá `OPENAI_API_KEY` con tu clave de la [API de OpenAI](https://platform.openai.com/api-keys). Es una variable **solo servidor** (no uses el prefijo `NEXT_PUBLIC_`). En Vercel: **Project Settings → Environment Variables → `OPENAI_API_KEY`**.
+
 > `.env.local` no se versiona en git.
 
 ## Desarrollo local
