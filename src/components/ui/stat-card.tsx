@@ -11,6 +11,11 @@ type Delta = {
   label?: string;
   /** Cuando `value` es 0 y `label` corresponde a "estable". */
   neutralOnZero?: boolean;
+  /**
+   * `percent` muestra % (ingresos, neto, gastos).
+   * `percentagePoints` muestra p.p. (margen neto vs otro período).
+   */
+  display?: "percent" | "percentagePoints";
 };
 
 type StatCardProps = {
@@ -39,6 +44,9 @@ type StatCardProps = {
   /** Valor numérico para animación count-up; requiere `formatCountUp`. */
   countUpAmount?: number;
   formatCountUp?: (n: number) => string;
+  /** Serie corta para micrográfico (ej. últimos meses). */
+  sparkline?: number[];
+  sparklineTone?: "info" | "positive" | "negative" | "warning" | "muted";
 };
 
 function deltaToneClasses(positive?: boolean) {
@@ -90,11 +98,13 @@ export function StatCard({
   financialStress = "none",
   countUpAmount,
   formatCountUp,
+  sparkline,
+  sparklineTone = "muted",
 }: StatCardProps) {
   const isHero = size === "hero";
   const stress = stressClasses(financialStress);
   const useAnimation = countUpAmount !== undefined && formatCountUp != null;
-  const animated = useCountUp(useAnimation ? countUpAmount : 0, 950, useAnimation);
+  const animated = useCountUp(useAnimation ? countUpAmount : 0, 900, useAnimation);
   const displayValue = useAnimation ? formatCountUp(animated) : value;
   const valueClass = isHero
     ? prominence === "secondary"
@@ -115,7 +125,7 @@ export function StatCard({
           </p>
           {icon ? (
             <span
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 hover:scale-[1.04] ${accentClasses(
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-300 hover:scale-[1.03] ${accentClasses(
                 accent,
               )}`}
               aria-hidden
@@ -125,43 +135,50 @@ export function StatCard({
           ) : null}
         </div>
 
-        <div className="space-y-1.5">
-          <p
-            className={`truncate font-semibold tabular-nums tracking-tight text-[var(--foreground-strong)] ${valueClass}`}
-          >
-            {displayValue}
-          </p>
-          {hint ? (
-            <p className="text-[12px] leading-relaxed text-[var(--foreground-muted)]">
-              {hint}
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <p
+              className={`truncate font-semibold tabular-nums tracking-tight text-[var(--foreground-strong)] ${valueClass}`}
+            >
+              {displayValue}
             </p>
-          ) : null}
-        </div>
-
-        {delta || trend ? (
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            {delta ? (
-              <DeltaPill delta={delta} />
+            {hint ? (
+              <p className="text-[12px] leading-relaxed text-[var(--foreground-muted)]">
+                {hint}
+              </p>
             ) : null}
-            {trend ? (
-              <span className="text-[11.5px] text-[var(--foreground-muted)]">
-                {trend.label}
-              </span>
+            {delta || trend ? (
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                {delta ? (
+                  <DeltaPill delta={delta} />
+                ) : null}
+                {trend ? (
+                  <span className="text-[11.5px] text-[var(--foreground-muted)]">
+                    {trend.label}
+                  </span>
+                ) : null}
+              </div>
             ) : null}
           </div>
-        ) : null}
+          {sparkline && sparkline.length > 1 ? (
+            <MiniSparkline values={sparkline} tone={sparklineTone} />
+          ) : null}
+        </div>
       </div>
     </Card>
   );
 }
 
 function DeltaPill({ delta }: { delta: Delta }) {
-  const { value, label, neutralOnZero } = delta;
+  const { value, label, neutralOnZero, display = "percent" } = delta;
   const isNeutral = neutralOnZero && Math.abs(value) < 0.05;
   const positive = isNeutral ? undefined : value >= 0;
   const tone = deltaToneClasses(positive);
   const sign = isNeutral ? "" : value >= 0 ? "+" : "";
-  const rounded = isNeutral ? "estable" : `${sign}${value.toFixed(1)}%`;
+  const suffix = display === "percentagePoints" ? " p.p." : "%";
+  const rounded = isNeutral
+    ? "estable"
+    : `${sign}${value.toFixed(1)}${suffix}`;
 
   return (
     <span
@@ -187,5 +204,63 @@ function DeltaPill({ delta }: { delta: Delta }) {
         <span className="font-normal opacity-70">· {label}</span>
       ) : null}
     </span>
+  );
+}
+
+const sparklineToneClass: Record<
+  NonNullable<StatCardProps["sparklineTone"]>,
+  string
+> = {
+  info: "text-[var(--accent)]",
+  positive: "text-[var(--success)]",
+  negative: "text-[var(--danger)]",
+  warning: "text-[var(--warning)]",
+  muted: "text-[var(--foreground-muted)]",
+};
+
+function MiniSparkline({
+  values,
+  tone,
+}: {
+  values: number[];
+  tone: NonNullable<StatCardProps["sparklineTone"]>;
+}) {
+  const w = 76;
+  const h = 32;
+  const padX = 2;
+  const padY = 3;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pts = values
+    .map((v, i) => {
+      const x =
+        values.length <= 1
+          ? w / 2
+          : padX + (i / (values.length - 1)) * (w - 2 * padX);
+      const y =
+        max === min
+          ? h / 2
+          : padY + (1 - (v - min) / (max - min)) * (h - 2 * padY);
+      return `${x},${y}`;
+    })
+    .join(" ");
+  return (
+    <svg
+      width={w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      className={`shrink-0 ${sparklineToneClass[tone]}`}
+      aria-hidden
+    >
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={pts}
+        opacity={0.92}
+      />
+    </svg>
   );
 }
