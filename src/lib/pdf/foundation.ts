@@ -1,31 +1,30 @@
 /**
- * Fundación de los PDFs corporativos.
+ * Fundación de PDFs de gestión (A4).
  *
- * Patrón visual:
- *  - Banda lateral izquierda gris oscuro (acento de marca).
- *  - Letterhead con logo del negocio + nombre + tagline + período.
- *  - KPI cards (rectángulos con borde fino y números grandes).
- *  - Secciones con barra delgada de color y subtítulo en gris.
- *  - Tablas con `jspdf-autotable` y estilos custom (hairlines + zebra).
- *  - Gráficos vectoriales: barras horizontales/verticales, línea, donut.
- *  - Pie de página con paginación, nombre del negocio y `legalFooter`.
+ * Tipografía: Times (cuerpo/tablas) + Helvetica (títulos y KPIs).
+ * Layout: banda lateral, encabezado con empresa / informe / período / emisión,
+ * tablas con cabecera oscura, gráficos vectoriales simples.
  *
- * Toda la unidad es mm (jsPDF default), A4 portrait: 210 x 297.
+ * Unidad: mm. Formato: A4 vertical.
  */
 import { jsPDF } from "jspdf";
 import autoTable, { type RowInput } from "jspdf-autotable";
 import type { AppSettings } from "@/lib/data/types";
 import { formatCurrency, formatDate } from "@/lib/format";
 
+/** Tipografía: Times para cuerpo/tablas (aspecto formal); Helvetica para títulos y KPIs. */
+export const FONT_BODY = "times" as const;
+export const FONT_UI = "helvetica" as const;
+
 export const PAGE = {
   width: 210,
   height: 297,
-  marginX: 18,
-  marginTop: 22,
-  marginBottom: 18,
-  contentLeft: 18,
-  contentRight: 192,
-  contentWidth: 192 - 18,
+  marginX: 16,
+  marginTop: 24,
+  marginBottom: 16,
+  contentLeft: 16,
+  contentRight: 194,
+  contentWidth: 194 - 16,
 };
 
 export const COLORS = {
@@ -102,7 +101,7 @@ export function drawLetterhead(ctx: DocContext): void {
 
   // Banda lateral izquierda
   setFill(doc, COLORS.accent);
-  doc.rect(0, 0, 6, PAGE.height, "F");
+  doc.rect(0, 0, 5, PAGE.height, "F");
 
   // Logo (si hay)
   let textOffsetX = PAGE.contentLeft;
@@ -114,55 +113,57 @@ export function drawLetterhead(ctx: DocContext): void {
           settings.logoDataUrl,
           fmt,
           PAGE.contentLeft,
-          12,
-          18,
-          18,
+          11,
+          16,
+          16,
           undefined,
           "FAST",
         );
-        textOffsetX = PAGE.contentLeft + 22;
+        textOffsetX = PAGE.contentLeft + 20;
       } catch {
         // si la imagen está corrupta, seguimos sin logo
       }
     }
   }
 
-  // Nombre del negocio
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  setText(doc, COLORS.ink);
   const shopName = settings.shopName?.trim() || "Mi negocio";
-  doc.text(shopName.toUpperCase(), textOffsetX, 18);
 
-  // Título del informe
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  setText(doc, COLORS.ink);
-  doc.text(title, textOffsetX, 25);
-
-  // Subtítulo / período
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFont(FONT_UI, "bold");
+  doc.setFontSize(8.5);
   setText(doc, COLORS.mute);
-  if (subtitle) doc.text(subtitle, textOffsetX, 30);
-  doc.text(`Período: ${periodLabel}`, textOffsetX, subtitle ? 34 : 30);
+  doc.text(shopName.toUpperCase(), textOffsetX, 15);
 
-  // Fecha de emisión (alineada a la derecha)
+  doc.setFont(FONT_UI, "bold");
+  doc.setFontSize(15);
+  setText(doc, COLORS.ink);
+  doc.text(title, textOffsetX, 23);
+
+  doc.setFont(FONT_BODY, "normal");
+  doc.setFontSize(8.5);
+  setText(doc, COLORS.mute);
+  let metaY = 28;
+  if (subtitle) {
+    doc.text(subtitle, textOffsetX, metaY);
+    metaY += 4;
+  }
+  doc.text(`Período: ${periodLabel}`, textOffsetX, metaY);
+
+  doc.setFont(FONT_BODY, "normal");
   doc.setFontSize(8);
   setText(doc, COLORS.mute);
   doc.text(
-    `Emitido: ${formatDate(new Date().toISOString())}`,
+    `Emisión: ${formatDate(new Date().toISOString())}`,
     PAGE.contentRight,
-    18,
+    15,
     { align: "right" },
   );
 
-  // Línea separadora
   setDraw(doc, COLORS.hairline);
-  doc.setLineWidth(0.3);
-  doc.line(PAGE.contentLeft, 38, PAGE.contentRight, 38);
+  doc.setLineWidth(0.25);
+  const ruleY = metaY + 5;
+  doc.line(PAGE.contentLeft, ruleY, PAGE.contentRight, ruleY);
 
-  ctx.y = 44;
+  ctx.y = ruleY + 7;
 }
 
 /**
@@ -183,14 +184,15 @@ export function drawFooters(ctx: DocContext): void {
       PAGE.height - 14,
     );
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+    doc.setFont(FONT_BODY, "normal");
+    doc.setFontSize(7.5);
     setText(doc, COLORS.mute);
 
     const left = settings.shopName?.trim() || "Mi negocio";
     doc.text(left, PAGE.contentLeft, PAGE.height - 9);
 
-    const center = settings.legalFooter?.trim() ?? "Documento generado automáticamente";
+    const center =
+      settings.legalFooter?.trim() ?? "Documento interno · Confidencial";
     doc.text(center, PAGE.width / 2, PAGE.height - 9, { align: "center" });
 
     doc.text(
@@ -222,19 +224,19 @@ export function drawSection(
   setFill(doc, COLORS.accent);
   doc.rect(PAGE.contentLeft, ctx.y, 2.5, 7, "F");
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
+  doc.setFont(FONT_UI, "bold");
+  doc.setFontSize(11);
   setText(doc, COLORS.ink);
   doc.text(title, PAGE.contentLeft + 5, ctx.y + 5.2);
 
   if (subtitle) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
+    doc.setFont(FONT_BODY, "normal");
+    doc.setFontSize(8);
     setText(doc, COLORS.mute);
-    doc.text(subtitle, PAGE.contentLeft + 5, ctx.y + 10);
-    ctx.y += 14;
+    doc.text(subtitle, PAGE.contentLeft + 5, ctx.y + 9.5);
+    ctx.y += 13;
   } else {
-    ctx.y += 11;
+    ctx.y += 10;
   }
 }
 
@@ -272,13 +274,13 @@ export function drawKpiGrid(ctx: DocContext, cards: KpiCard[]): void {
     doc.roundedRect(x, y, w, h, 2, 2, "FD");
 
     const c = cards[i];
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
+    doc.setFont(FONT_UI, "bold");
+    doc.setFontSize(7);
     setText(doc, COLORS.mute);
     doc.text(c.label.toUpperCase(), x + 4, y + 5.5);
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFont(FONT_UI, "bold");
+    doc.setFontSize(13);
     const tone = c.tone ?? "neutral";
     const valueColor =
       tone === "positive"
@@ -292,8 +294,8 @@ export function drawKpiGrid(ctx: DocContext, cards: KpiCard[]): void {
     doc.text(c.value, x + 4, y + 14.5);
 
     if (c.hint) {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.5);
+      doc.setFont(FONT_BODY, "normal");
+      doc.setFontSize(7);
       setText(doc, COLORS.mute);
       doc.text(c.hint, x + 4, y + 20);
     }
@@ -312,8 +314,8 @@ export function drawParagraph(
     PAGE.contentWidth,
   ) as string[];
   ensureSpace(ctx, lines.length * 4.5 + 2);
-  ctx.doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
-  ctx.doc.setFontSize(opts?.size ?? 9.5);
+  ctx.doc.setFont(FONT_BODY, opts?.bold ? "bold" : "normal");
+  ctx.doc.setFontSize(opts?.size ?? 9);
   setText(ctx.doc, COLORS.ink);
   for (const line of lines) {
     ctx.doc.text(line, PAGE.contentLeft, ctx.y);
@@ -322,22 +324,31 @@ export function drawParagraph(
   ctx.y += 2;
 }
 
-/** Línea de viñetas para las conclusiones. */
+/** Conclusiones ejecutivas: lista numerada compacta (tono informe gerencial). */
 export function drawBullets(ctx: DocContext, items: string[]): void {
   if (items.length === 0) return;
   const { doc } = ctx;
+  const indent = PAGE.contentLeft + 6;
+  const textW = PAGE.contentWidth - 10;
+  let n = 1;
   for (const it of items) {
-    const lines = doc.splitTextToSize(it, PAGE.contentWidth - 6) as string[];
-    ensureSpace(ctx, lines.length * 4.5 + 1);
-    setFill(doc, COLORS.accent);
-    doc.circle(PAGE.contentLeft + 1.5, ctx.y - 1.5, 0.8, "F");
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9.5);
-    setText(doc, COLORS.ink);
+    const lines = doc.splitTextToSize(it, textW) as string[];
+    ensureSpace(ctx, lines.length * 4 + 3);
     for (let i = 0; i < lines.length; i++) {
-      doc.text(lines[i], PAGE.contentLeft + 5, ctx.y);
-      ctx.y += 4.5;
+      if (i === 0) {
+        doc.setFont(FONT_UI, "bold");
+        doc.setFontSize(8.5);
+        setText(doc, COLORS.ink);
+        doc.text(`${n}.`, PAGE.contentLeft + 1, ctx.y);
+      }
+      doc.setFont(FONT_BODY, "normal");
+      doc.setFontSize(8.8);
+      setText(doc, COLORS.ink);
+      doc.text(lines[i], indent, ctx.y);
+      ctx.y += 4;
     }
+    ctx.y += 1.5;
+    n++;
   }
   ctx.y += 2;
 }
@@ -361,8 +372,8 @@ export function drawTable(
     tableWidth: PAGE.contentWidth,
     theme: "plain",
     styles: {
-      font: "helvetica",
-      fontSize: 8.5,
+      font: FONT_BODY,
+      fontSize: 8,
       cellPadding: { top: 2.2, bottom: 2.2, left: 3, right: 3 },
       textColor: COLORS.ink,
       lineColor: COLORS.hairline,
@@ -371,6 +382,7 @@ export function drawTable(
     headStyles: {
       fillColor: COLORS.accent,
       textColor: COLORS.white,
+      font: FONT_UI,
       fontStyle: "bold",
       halign: "left",
       lineWidth: 0,
@@ -448,7 +460,7 @@ export function drawVerticalBars(
   // grilla horizontal + labels eje Y
   setDraw(doc, COLORS.hairline);
   doc.setLineWidth(0.15);
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT_BODY, "normal");
   doc.setFontSize(7);
   setText(doc, COLORS.mute);
   for (let i = 0; i <= ticks; i++) {
@@ -485,7 +497,7 @@ export function drawVerticalBars(
       doc.rect(sx, y0 - sH, barW, sH, "F");
     }
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT_BODY, "normal");
     doc.setFontSize(7);
     setText(doc, COLORS.mute);
     doc.text(p.label, baseX + (hasSecondary ? barW : barW / 2), y0 + 4, {
@@ -504,7 +516,7 @@ export function drawVerticalBars(
     const ly = ctx.y - 2;
     setFill(doc, COLORS.accent);
     doc.rect(lx, ly - 2, 2.5, 2.5, "F");
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT_BODY, "normal");
     doc.setFontSize(7.5);
     setText(doc, COLORS.ink);
     doc.text(opts?.primaryLabel ?? "Actual", lx + 3.5, ly);
@@ -535,7 +547,7 @@ export function drawHorizontalBars(
   for (let i = 0; i < data.length; i++) {
     const p = data[i];
     const y = ctx.y + i * (rowH + 1.5);
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT_BODY, "normal");
     doc.setFontSize(8.2);
     setText(doc, COLORS.ink);
     const lbl = doc.splitTextToSize(p.label, labelW - 2)[0] as string;
@@ -551,7 +563,7 @@ export function drawHorizontalBars(
     doc.rect(x0, y, barW, rowH, "F");
 
     // valor
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT_UI, "bold");
     doc.setFontSize(8);
     setText(doc, COLORS.ink);
     doc.text(
@@ -598,7 +610,7 @@ export function drawLineChart(
   const ticks = 4;
   setDraw(doc, COLORS.hairline);
   doc.setLineWidth(0.15);
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT_BODY, "normal");
   doc.setFontSize(7);
   setText(doc, COLORS.mute);
   for (let i = 0; i <= ticks; i++) {
@@ -650,7 +662,7 @@ export function drawLineChart(
   }
 
   // X labels
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT_BODY, "normal");
   doc.setFontSize(7);
   setText(doc, COLORS.mute);
   for (let i = 0; i < data.length; i++) {
@@ -669,7 +681,7 @@ export function drawLineChart(
     const ly = ctx.y - 2;
     setFill(doc, COLORS.accent);
     doc.rect(lx, ly - 2, 2.5, 2.5, "F");
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT_BODY, "normal");
     doc.setFontSize(7.5);
     setText(doc, COLORS.ink);
     doc.text(opts.primaryLabel ?? "Actual", lx + 3.5, ly);
@@ -728,13 +740,13 @@ export function drawDonut(
 
   // Centro
   if (opts?.centerValue) {
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT_UI, "bold");
     doc.setFontSize(11);
     setText(doc, COLORS.ink);
     doc.text(opts.centerValue, cx, cy + 1, { align: "center" });
   }
   if (opts?.centerLabel) {
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT_BODY, "normal");
     doc.setFontSize(7);
     setText(doc, COLORS.mute);
     doc.text(opts.centerLabel, cx, cy - 5, { align: "center" });
@@ -746,7 +758,7 @@ export function drawDonut(
   for (const s of slices) {
     setFill(doc, s.color);
     doc.rect(lx, ly - 2.6, 3, 3, "F");
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT_BODY, "normal");
     doc.setFontSize(8.5);
     setText(doc, COLORS.ink);
     const pct = total > 0 ? ((s.value / total) * 100).toFixed(1) : "0.0";
@@ -789,7 +801,7 @@ export function drawHeroKpi(
   setFill(doc, COLORS.accent);
   doc.rect(PAGE.contentLeft, ctx.y, 3, h, "F");
 
-  doc.setFont("helvetica", "bold");
+  doc.setFont(FONT_UI, "bold");
   doc.setFontSize(8);
   setText(doc, COLORS.mute);
   doc.text(
@@ -798,7 +810,7 @@ export function drawHeroKpi(
     ctx.y + 6,
   );
 
-  doc.setFont("helvetica", "bold");
+  doc.setFont(FONT_UI, "bold");
   doc.setFontSize(22);
   setText(doc, COLORS.ink);
   doc.text(card.value, PAGE.contentLeft + 7, ctx.y + 18);
@@ -810,14 +822,14 @@ export function drawHeroKpi(
         : card.deltaTone === "negative"
           ? COLORS.negative
           : COLORS.mute;
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT_UI, "bold");
     doc.setFontSize(9);
     setText(doc, tone);
     doc.text(card.deltaLabel, PAGE.contentLeft + 7, ctx.y + 25);
   }
 
   if (card.description) {
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT_BODY, "normal");
     doc.setFontSize(8.5);
     setText(doc, COLORS.mute);
     const lines = doc.splitTextToSize(
@@ -872,7 +884,7 @@ export function drawStackedBars(
   const ticks = 4;
   setDraw(doc, COLORS.hairline);
   doc.setLineWidth(0.15);
-  doc.setFont("helvetica", "normal");
+  doc.setFont(FONT_BODY, "normal");
   doc.setFontSize(7);
   setText(doc, COLORS.mute);
   for (let i = 0; i <= ticks; i++) {
@@ -899,7 +911,7 @@ export function drawStackedBars(
       doc.rect(x, cursorY - segH, barW, segH, "F");
       cursorY -= segH;
     }
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT_BODY, "normal");
     doc.setFontSize(7);
     setText(doc, COLORS.mute);
     doc.text(p.label, x + barW / 2, y0 + 4, { align: "center" });
@@ -912,7 +924,7 @@ export function drawStackedBars(
   if (opts?.legend && opts.legend.length > 0) {
     let lx = x0;
     const ly = ctx.y - 2;
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT_BODY, "normal");
     doc.setFontSize(7.5);
     for (const it of opts.legend) {
       setFill(doc, it.color);
@@ -951,7 +963,7 @@ export function createReport(
     title,
     subject: title,
     author: settings.shopName?.trim() || "Mi negocio",
-    creator: "Gestión interna",
+    creator: "Gestión interna · Reportes",
   });
   const ctx: DocContext = {
     doc,

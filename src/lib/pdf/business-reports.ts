@@ -43,6 +43,8 @@ import type {
   ExpenseCategory,
   ExpenseRecurrence,
   PaymentMethod,
+  Product,
+  ProductFamily,
 } from "@/lib/data/types";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
@@ -92,6 +94,20 @@ function safeDiv(a: number, b: number): number {
   return b === 0 ? 0 : a / b;
 }
 
+/** Orden catálogo: familia → modelo → nombre (misma lógica que la vista Stock). */
+function sortProductsForStockPdf(products: Product[], families: ProductFamily[]): Product[] {
+  const famMap = new Map(families.map((f) => [f.id, f]));
+  return [...products].sort((a, b) => {
+    const fa = famMap.get(a.familyId)?.name ?? "";
+    const fb = famMap.get(b.familyId)?.name ?? "";
+    const c1 = fa.localeCompare(fb, "es", { sensitivity: "base" });
+    if (c1 !== 0) return c1;
+    const c2 = a.model.localeCompare(b.model, "es", { sensitivity: "base" });
+    if (c2 !== 0) return c2;
+    return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
+  });
+}
+
 function timestampSuffix(date = new Date()): string {
   return date.toISOString().slice(0, 10);
 }
@@ -120,7 +136,7 @@ export function generateSalesReport(
     data.settings,
     "Reporte de ventas",
     periodLabel,
-    "Resumen ejecutivo del rendimiento comercial",
+    "Facturación y margen bruto del período",
   );
   const currency = data.settings.currency || "ARS";
   const sales = filterSalesInRange(data.sales, range);
@@ -215,26 +231,21 @@ export function generateSalesReport(
   );
 
   // Conclusiones
-  drawSection(ctx, "Conclusiones");
+  drawSection(ctx, "Síntesis");
   const topProduct = top[0];
-  const conclusions: string[] = [];
-  conclusions.push(
-    `Ingresos del período: ${formatCurrency(revenue, currency)} en ${sales.length} ventas; ticket promedio ${formatCurrency(avgTicket, currency)}.`,
-  );
-  if (topProduct) {
-    conclusions.push(
-      `Producto líder por facturación: ${topProduct.name} con ${formatCurrency(topProduct.revenue, currency)} (${topProduct.quantity} unidades).`,
-    );
-  }
-  conclusions.push(
-    `Margen bruto: ${(safeDiv(grossProfit, revenue) * 100).toFixed(1)}% — ganancia ${formatCurrency(grossProfit, currency)} sobre ${formatCurrency(revenue, currency)}.`,
-  );
+  const conclusions: string[] = [
+    `${formatCurrency(revenue, currency)} · ${sales.length} operaciones · ticket medio ${formatCurrency(avgTicket, currency)}.`,
+    topProduct
+      ? `Mayor facturación: ${topProduct.name} (${formatCurrency(topProduct.revenue, currency)}, ${topProduct.quantity} uds).`
+      : `Sin líneas de venta con producto identificado.`,
+    `Margen bruto ${(safeDiv(grossProfit, revenue) * 100).toFixed(1)}% (${formatCurrency(grossProfit, currency)}).`,
+  ];
   if (paymentDistribution.size > 0) {
     const top1 = (
       Array.from(paymentDistribution.entries()) as [PaymentMethod, number][]
     ).sort((a, b) => b[1] - a[1])[0];
     conclusions.push(
-      `Medio de pago dominante: ${top1[0]} (${((top1[1] / revenue) * 100).toFixed(1)}% del total).`,
+      `Medio de pago principal: ${top1[0]} (${((top1[1] / revenue) * 100).toFixed(1)}%).`,
     );
   }
   drawBullets(ctx, conclusions);
@@ -256,7 +267,7 @@ export function generateCostsReport(
     data.settings,
     "Reporte de costos",
     periodLabel,
-    "Costo de ventas, compras, gastos operativos (incluye recurrencias) y pérdidas",
+    "COGS, compras, gastos operativos y defectuosos",
   );
   const currency = data.settings.currency || "ARS";
   const pmap = productByIdMap(data.products);
@@ -293,7 +304,8 @@ export function generateCostsReport(
 
   drawParagraph(
     ctx,
-    `Egreso económico reconocido o esperado en el período: ${formatCurrency(totalOutflow, currency)} (COGS + gastos operativos + pérdida por defectuosos). Los gastos operativos incluyen las cuotas de gastos recurrentes que aún no se emitieron (proyección). Las compras de mercadería se contabilizan como inversión en inventario, no como costo del período.`,
+    `Egresos reconocidos o esperados: ${formatCurrency(totalOutflow, currency)} (COGS + gastos operativos con recurrencias proyectadas + defectuosos). Las compras de mercadería figuran como movimiento de inventario.`,
+    { size: 8.5 },
   );
 
   // Gastos por categoría (totales: emitido + proyectado)
@@ -431,18 +443,18 @@ export function generateCostsReport(
   }
 
   // Conclusiones
-  drawSection(ctx, "Conclusiones");
+  drawSection(ctx, "Síntesis");
   const cogsPct = (safeDiv(cogs, totalOutflow) * 100).toFixed(1);
   const expensePct = (safeDiv(expBreakdown.total, totalOutflow) * 100).toFixed(1);
   drawBullets(ctx, [
-    `Total de costos del período: ${formatCurrency(totalOutflow, currency)} (COGS ${cogsPct}%, gastos ${expensePct}%).`,
+    `Total egresos cargados: ${formatCurrency(totalOutflow, currency)} (COGS ${cogsPct}%, gastos ${expensePct}%).`,
     expBreakdown.projectedTotal > 0
-      ? `Incluye ${formatCurrency(expBreakdown.projectedTotal, currency)} de recurrencias proyectadas que aún no se emitieron como gasto.`
-      : `Todas las recurrencias activas ya están emitidas como gasto dentro del período.`,
-    `Inversión en inventario del período: ${formatCurrency(purchaseSpend, currency)} en ${purchases.length} compras.`,
+      ? `Pendiente de emisión por recurrencias: ${formatCurrency(expBreakdown.projectedTotal, currency)}.`
+      : `Sin montos de recurrencia pendientes de emisión en el período.`,
+    `Compras registradas: ${formatCurrency(purchaseSpend, currency)} (${purchases.length} órdenes).`,
     defectiveLoss > 0
-      ? `Pérdida por unidades defectuosas: ${formatCurrency(defectiveLoss, currency)} — revisar control de calidad.`
-      : "Sin pérdidas registradas por unidades defectuosas en el período.",
+      ? `Defectuosos: ${formatCurrency(defectiveLoss, currency)}.`
+      : `Sin costo por defectuosos en el período.`,
   ]);
 
   finishAndSave(ctx, `reporte_costos_${timestampSuffix()}.pdf`);
@@ -580,7 +592,7 @@ export function generateProfitReport(
     data.settings,
     "Reporte de ganancias",
     periodLabel,
-    "Análisis de margen, ganancia neta y rentabilidad por producto",
+    "Resultado y rentabilidad por producto",
   );
   const currency = data.settings.currency || "ARS";
   const m = periodMetricsWithProjections(data, range);
@@ -616,8 +628,8 @@ export function generateProfitReport(
 
   drawParagraph(
     ctx,
-    `Ganancia neta = Ingresos − COGS − Gastos operativos (incluye recurrencias proyectadas) − Pérdida por defectuosos. ` +
-      `Las compras de mercadería no impactan el resultado del período (se contabilizan como inventario).`,
+    `Neto = ingresos − COGS − gastos operativos (incluye recurrencias proyectadas) − defectuosos. Las compras no impactan este resultado.`,
+    { size: 8.5 },
   );
 
   // Comparativa Bruta vs Neta
@@ -739,27 +751,24 @@ export function generateProfitReport(
     );
   }
 
-  drawSection(ctx, "Conclusiones");
+  drawSection(ctx, "Síntesis");
   const topProfit = profitability[0];
-  const conclusions: string[] = [];
-  conclusions.push(
-    m.netProfitProjected >= 0
-      ? `Resultado neto positivo: ${formatCurrency(m.netProfitProjected, currency)} (margen ${m.marginPctProjected.toFixed(1)}%).`
-      : `Resultado neto negativo: ${formatCurrency(m.netProfitProjected, currency)} (margen ${m.marginPctProjected.toFixed(1)}%). Revisar estructura de costos.`,
-  );
+  const conclusions: string[] = [
+    `Resultado neto ${formatCurrency(m.netProfitProjected, currency)} · margen neto ${m.marginPctProjected.toFixed(1)}%.`,
+  ];
   if (m.expensesProjectedExtra > 0) {
     conclusions.push(
-      `Atención: ${formatCurrency(m.expensesProjectedExtra, currency)} corresponden a recurrencias proyectadas no emitidas. Sin ellas, la ganancia parecería ${formatCurrency(m.netProfit, currency)}.`,
+      `Recurrencias no emitidas en el período: ${formatCurrency(m.expensesProjectedExtra, currency)} (imputadas al neto proyectado).`,
     );
   }
   if (topProfit) {
     conclusions.push(
-      `Producto más rentable: ${topProfit.name} con ${formatCurrency(topProfit.profit, currency)} de ganancia (margen ${topProfit.margin.toFixed(1)}%).`,
+      `Mayor contribución bruta: ${topProfit.name} (${formatCurrency(topProfit.profit, currency)}, margen ${topProfit.margin.toFixed(1)}%).`,
     );
   }
   if (m.defectiveLoss > 0) {
     conclusions.push(
-      `Pérdida por defectuosos: ${formatCurrency(m.defectiveLoss, currency)} — impacto de ${(safeDiv(m.defectiveLoss, m.revenue) * 100).toFixed(1)}% sobre ingresos.`,
+      `Defectuosos: ${formatCurrency(m.defectiveLoss, currency)} (${(safeDiv(m.defectiveLoss, m.revenue) * 100).toFixed(1)}% de ingresos).`,
     );
   }
   drawBullets(ctx, conclusions);
@@ -774,9 +783,9 @@ export function generateProfitReport(
 export function generateStockReport(data: AppData): void {
   const ctx = createReport(
     data.settings,
-    "Reporte de stock",
-    `Foto al ${formatDate(new Date().toISOString())}`,
-    "Estado actual del inventario y alertas de reposición",
+    "Reporte de inventario",
+    `Corte ${formatDate(new Date().toISOString())}`,
+    "Existencias y reposición",
   );
   const currency = data.settings.currency || "ARS";
   const products = data.products;
@@ -822,11 +831,7 @@ export function generateStockReport(data: AppData): void {
   );
 
   if (out.length > 0) {
-    drawSection(
-      ctx,
-      "Productos agotados",
-      "Acción recomendada: reponer urgente o pausar oferta",
-    );
+  drawSection(ctx, "Referencias críticas");
     drawTable(
       ctx,
       ["Producto", "Familia", "Stock mínimo", "Costo u."],
@@ -846,11 +851,7 @@ export function generateStockReport(data: AppData): void {
   }
 
   if (low.length > 0) {
-    drawSection(
-      ctx,
-      "Stock por debajo del mínimo",
-      "Programar reposición para no quedar fuera de oferta",
-    );
+    drawSection(ctx, "SKU sin stock");
     drawTable(
       ctx,
       ["Producto", "Stock actual", "Mínimo", "Faltante", "Costo reponer*"],
@@ -880,10 +881,9 @@ export function generateStockReport(data: AppData): void {
     );
   }
 
-  drawSection(ctx, "Inventario completo");
-  const allRows = [...products]
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((p) => [
+  drawSection(ctx, "Detalle por familia y modelo");
+  const sortedStock = sortProductsForStockPdf(products, data.productFamilies);
+  const allRows = sortedStock.map((p) => [
       p.name,
       familyById.get(p.familyId)?.name ?? "—",
       String(p.stock),
@@ -905,14 +905,12 @@ export function generateStockReport(data: AppData): void {
     },
   );
 
-  drawSection(ctx, "Conclusiones");
+  drawSection(ctx, "Síntesis");
   const conclusions: string[] = [
-    `Valor total del inventario al costo: ${formatCurrency(valuation, currency)} (${totalUnits} unidades, ${products.length} variantes).`,
+    `${formatCurrency(valuation, currency)} al costo · ${totalUnits} unidades · ${products.length} variantes.`,
   ];
   if (out.length > 0) {
-    conclusions.push(
-      `Hay ${out.length} producto${out.length === 1 ? "" : "s"} agotado${out.length === 1 ? "" : "s"} requiriendo reposición inmediata.`,
-    );
+    conclusions.push(`${out.length} SKU sin stock.`);
   }
   if (low.length > 0) {
     const totalGap = low.reduce(
@@ -920,11 +918,11 @@ export function generateStockReport(data: AppData): void {
       0,
     );
     conclusions.push(
-      `${low.length} producto${low.length === 1 ? "" : "s"} bajo el mínimo. Costo estimado de reposición: ${formatCurrency(totalGap, currency)}.`,
+      `${low.length} SKU bajo mínimo · reposición estimada ${formatCurrency(totalGap, currency)}.`,
     );
   }
   if (out.length === 0 && low.length === 0) {
-    conclusions.push("Niveles de stock saludables; sin alertas activas.");
+    conclusions.push("Sin alertas de reposición según mínimos configurados.");
   }
   drawBullets(ctx, conclusions);
 
@@ -954,9 +952,9 @@ export function generateMonthlyReport(
 
   const ctx = createReport(
     data.settings,
-    "Reporte mensual",
+    "Informe mensual",
     monthLabel(month, year),
-    "Resumen ejecutivo del mes con comparativo interanual",
+    `Comparativo con ${monthLabel(month, year - 1)}`,
   );
   const currency = data.settings.currency || "ARS";
 
@@ -964,7 +962,6 @@ export function generateMonthlyReport(
   const mPrev = periodMetricsWithProjections(data, prevRange);
   const expBreakdown = expensesForReportingPeriod(data, range);
   const sales = filterSalesInRange(data.sales, range);
-  const pmap = productByIdMap(data.products);
   const top = topProductsByRevenue(sales, data.products, 6);
   const low = data.products.filter((p) => stockStatus(p) === "bajo");
 
@@ -1007,9 +1004,8 @@ export function generateMonthlyReport(
 
   drawParagraph(
     ctx,
-    `Este informe consolida el desempeño operativo de ${monthLabel(month, year)}. ` +
-      `Se incluye comparativo con el mismo mes del año anterior, distribución de ventas, ` +
-      `gastos por categoría y alertas operativas relevantes para la toma de decisión.`,
+    `Consolidado de ${monthLabel(month, year)}. Los gastos incluyen recurrencias proyectadas no emitidas donde corresponda.`,
+    { size: 8.5 },
   );
 
   // KPIs adicionales
@@ -1144,36 +1140,23 @@ export function generateMonthlyReport(
   }
 
   // Conclusiones ejecutivas
-  drawSection(ctx, "Conclusiones ejecutivas");
-  const conclusions: string[] = [];
-  conclusions.push(
-    revenueChange >= 0
-      ? `Ingresos creciendo ${fmtPct(revenueChange)} frente al mismo mes del año anterior (${formatCurrency(mPrev.revenue, currency)} → ${formatCurrency(m.revenue, currency)}).`
-      : `Ingresos cayendo ${fmtPct(revenueChange)} frente al mismo mes del año anterior. Revisar canales de venta y estrategia comercial.`,
-  );
-  conclusions.push(
-    m.netProfitProjected >= 0
-      ? `Mes con resultado positivo: ${formatCurrency(m.netProfitProjected, currency)} de ganancia neta (margen ${m.marginPctProjected.toFixed(1)}%).`
-      : `Mes con resultado negativo: ${formatCurrency(m.netProfitProjected, currency)}. Evaluar reducción de gastos o ajuste de precios.`,
-  );
+  drawSection(ctx, "Síntesis");
+  const conclusions: string[] = [
+    `Ingresos ${formatCurrency(m.revenue, currency)} (${fmtPct(revenueChange)} vs ${monthLabel(month, year - 1)}).`,
+    `Neto ${formatCurrency(m.netProfitProjected, currency)} · margen ${m.marginPctProjected.toFixed(1)}%.`,
+  ];
   if (m.expensesProjectedExtra > 0) {
     conclusions.push(
-      `Atención: ${formatCurrency(m.expensesProjectedExtra, currency)} de gastos recurrentes todavía no se emitieron este mes (cuotas que se emitirán automáticamente al cumplirse su fecha).`,
+      `Recurrencias pendientes de emisión: ${formatCurrency(m.expensesProjectedExtra, currency)}.`,
     );
   }
   if (top[0]) {
     conclusions.push(
-      `Producto destacado: ${top[0].name} con ${formatCurrency(top[0].revenue, currency)} en ingresos y ${top[0].quantity} unidades vendidas.`,
+      `Principal SKU por facturación: ${top[0].name} (${formatCurrency(top[0].revenue, currency)}).`,
     );
   }
   if (low.length > 0) {
-    const sample = low
-      .slice(0, 3)
-      .map((p) => pmap.get(p.id)?.name ?? p.name)
-      .join(", ");
-    conclusions.push(
-      `${low.length} producto${low.length === 1 ? "" : "s"} bajo stock mínimo${low.length > 0 ? ` (ej. ${sample})` : ""}. Programar reposición.`,
-    );
+    conclusions.push(`${low.length} SKU bajo mínimo de stock.`);
   }
   drawBullets(ctx, conclusions);
 
@@ -1201,9 +1184,9 @@ export function generateAnnualReport(data: AppData, year: number): void {
 
   const ctx = createReport(
     data.settings,
-    "Reporte anual",
-    `Año ${year}`,
-    "Cierre integral del ejercicio con comparativo y proyección de gastos",
+    "Informe anual",
+    `Ejercicio ${year}`,
+    `Comparativo con ${year - 1}`,
   );
   const currency = data.settings.currency || "ARS";
 
@@ -1240,7 +1223,7 @@ export function generateAnnualReport(data: AppData, year: number): void {
     deltaLabel: `${fmtPct(changePct(m.netProfitProjected, mPrev.netProfitProjected))} vs ${year - 1}`,
     deltaTone:
       m.netProfitProjected >= mPrev.netProfitProjected ? "positive" : "negative",
-    description: `Margen neto ${m.marginPctProjected.toFixed(1)}% sobre ${formatCurrency(m.revenue, currency)} de ingresos. Incluye gastos recurrentes proyectados.`,
+    description: `Margen neto ${m.marginPctProjected.toFixed(1)}% · ingresos ${formatCurrency(m.revenue, currency)} (incluye gastos recurrentes proyectados).`,
   });
 
   drawKpiGrid(ctx, [
@@ -1297,7 +1280,7 @@ export function generateAnnualReport(data: AppData, year: number): void {
   ]);
 
   // Highlights ejecutivos rápidos
-  drawSection(ctx, "Resumen ejecutivo");
+  drawSection(ctx, "Síntesis del ejercicio");
   const bestMonth = monthlyMetrics
     .map((row, i) => ({ ...row, idx: i }))
     .sort((a, b) => b.revenue - a.revenue)[0];
@@ -1306,21 +1289,19 @@ export function generateAnnualReport(data: AppData, year: number): void {
     .sort((a, b) => a.revenue - b.revenue)[0];
   const summary: string[] = [];
   summary.push(
-    m.revenue >= mPrev.revenue
-      ? `Crecimiento de ingresos: ${formatCurrency(m.revenue, currency)} (${fmtPct(changePct(m.revenue, mPrev.revenue))} interanual).`
-      : `Caída de ingresos: ${formatCurrency(m.revenue, currency)} (${fmtPct(changePct(m.revenue, mPrev.revenue))} interanual).`,
+    `Ingresos ${formatCurrency(m.revenue, currency)} (${fmtPct(changePct(m.revenue, mPrev.revenue))} vs ${year - 1}).`,
   );
   if (bestMonth && bestMonth.revenue > 0) {
     summary.push(
-      `Pico de facturación en ${monthsLabels[bestMonth.idx]} (${formatCurrency(bestMonth.revenue, currency)}). Mes más débil: ${monthsLabels[worstMonth.idx]} (${formatCurrency(worstMonth.revenue, currency)}).`,
+      `Mayor facturación mensual: ${monthsLabels[bestMonth.idx]} (${formatCurrency(bestMonth.revenue, currency)}); menor: ${monthsLabels[worstMonth.idx]} (${formatCurrency(worstMonth.revenue, currency)}).`,
     );
   }
   summary.push(
-    `Estructura de costos del año: COGS ${formatCurrency(m.cogsSales, currency)} (${(safeDiv(m.cogsSales, m.revenue) * 100).toFixed(1)}% ingresos) + Gastos operativos ${formatCurrency(m.expensesProjected, currency)} (${(safeDiv(m.expensesProjected, m.revenue) * 100).toFixed(1)}% ingresos)${m.defectiveLoss > 0 ? ` + Defectuosos ${formatCurrency(m.defectiveLoss, currency)}` : ""}.`,
+    `COGS ${formatCurrency(m.cogsSales, currency)} (${(safeDiv(m.cogsSales, m.revenue) * 100).toFixed(1)}% ing.) · Gastos ${formatCurrency(m.expensesProjected, currency)} (${(safeDiv(m.expensesProjected, m.revenue) * 100).toFixed(1)}% ing.)${m.defectiveLoss > 0 ? ` · Defectuosos ${formatCurrency(m.defectiveLoss, currency)}` : ""}.`,
   );
   if (m.expensesProjectedExtra > 0) {
     summary.push(
-      `Quedan ${formatCurrency(m.expensesProjectedExtra, currency)} de gastos recurrentes proyectados que aún no se emitieron como gasto (cuotas pendientes en el calendario).`,
+      `Recurrencias proyectadas no emitidas al cierre: ${formatCurrency(m.expensesProjectedExtra, currency)}.`,
     );
   }
   drawBullets(ctx, summary);
@@ -1366,8 +1347,8 @@ export function generateAnnualReport(data: AppData, year: number): void {
 
   drawSection(
     ctx,
-    "Ganancia bruta vs gastos del mes",
-    "Si la barra de ganancia bruta es menor a la de gastos, el mes fue negativo",
+    "Ganancia bruta y gastos mensuales",
+    "Barras: ganancia bruta vs. gastos operativos más defectuosos",
   );
   drawVerticalBars(
     ctx,
@@ -1543,35 +1524,19 @@ export function generateAnnualReport(data: AppData, year: number): void {
   }
 
   // Conclusiones ejecutivas
-  drawSection(ctx, "Conclusiones y recomendaciones");
-  const conclusions: string[] = [];
-  conclusions.push(
-    m.revenue >= mPrev.revenue
-      ? `Ingresos del año en crecimiento: ${formatCurrency(m.revenue, currency)} (${fmtPct(changePct(m.revenue, mPrev.revenue))} vs ${year - 1}).`
-      : `Ingresos del año en contracción: ${formatCurrency(m.revenue, currency)} (${fmtPct(changePct(m.revenue, mPrev.revenue))} vs ${year - 1}). Revisar estrategia comercial y canales de venta.`,
-  );
-  conclusions.push(
-    m.netProfitProjected >= 0
-      ? `Resultado neto positivo: ${formatCurrency(m.netProfitProjected, currency)} de ganancia (margen ${m.marginPctProjected.toFixed(1)}%).`
-      : `Resultado neto negativo: ${formatCurrency(m.netProfitProjected, currency)} (margen ${m.marginPctProjected.toFixed(1)}%). Recomendación: revisar pricing, reducir gastos no críticos y renegociar contratos recurrentes.`,
-  );
-  const cogsPctRev = safeDiv(m.cogsSales, m.revenue) * 100;
-  conclusions.push(
-    `COGS representa ${cogsPctRev.toFixed(1)}% de los ingresos. ${cogsPctRev > 65 ? "Margen bruto bajo: explorar ajuste de precios o reducir costo de proveedores." : "Margen bruto saludable."}`,
-  );
-  const expensesPctRev = safeDiv(m.expensesProjected, m.revenue) * 100;
-  conclusions.push(
-    `Gastos operativos: ${expensesPctRev.toFixed(1)}% sobre ingresos. ${expensesPctRev > 25 ? "Considerar revisar gastos fijos (sueldos, marketing, alquiler)." : "Estructura de gastos contenida."}`,
-  );
+  drawSection(ctx, "Cierre");
+  const conclusions: string[] = [
+    `Ingresos ${formatCurrency(m.revenue, currency)} (${fmtPct(changePct(m.revenue, mPrev.revenue))} vs ${year - 1}).`,
+    `Neto ${formatCurrency(m.netProfitProjected, currency)} · margen ${m.marginPctProjected.toFixed(1)}%.`,
+    `COGS ${(safeDiv(m.cogsSales, m.revenue) * 100).toFixed(1)}% ing. · Gastos ${(safeDiv(m.expensesProjected, m.revenue) * 100).toFixed(1)}% ing.`,
+  ];
   if (top[0]) {
     conclusions.push(
-      `Producto estrella: ${top[0].name} (${formatCurrency(top[0].revenue, currency)}; ${top[0].quantity} unidades). Asegurar stock y considerar campañas alrededor de este SKU.`,
+      `SKU líder: ${top[0].name} (${formatCurrency(top[0].revenue, currency)} · ${top[0].quantity} uds).`,
     );
   }
   if (m.defectiveLoss > 0) {
-    conclusions.push(
-      `Pérdida por defectuosos: ${formatCurrency(m.defectiveLoss, currency)}. Implementar control de calidad antes del despacho.`,
-    );
+    conclusions.push(`Defectuosos: ${formatCurrency(m.defectiveLoss, currency)}.`);
   }
   drawBullets(ctx, conclusions);
 
