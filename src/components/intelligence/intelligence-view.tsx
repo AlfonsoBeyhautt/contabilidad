@@ -27,7 +27,8 @@ import type {
   Insight,
   IntelligenceReport,
 } from "@/lib/intelligence/types";
-import { BusinessAnalystPanel } from "./business-analyst-panel";
+import { ExecutiveAnalysisPanel } from "./executive-analysis-panel";
+import { SpecificQuestionsPanel } from "./specific-questions-panel";
 import { InsightCard } from "./insight-card";
 import { HealthRing } from "./health-ring";
 
@@ -360,14 +361,18 @@ export function IntelligenceView() {
         </Card>
       </section>
 
-      <section className="space-y-4">
+      <section className="space-y-5">
         <SectionHeader
-          eyebrow="Consulta ejecutiva"
-          title="Analista empresarial"
-          description="Preguntas puntuales sobre el mismo período y motor de métricas que el informe. Requiere OPENAI_API_KEY en el servidor (nunca en el cliente)."
+          eyebrow="Interpretación asistida · datos reales"
+          title="Inteligencia artificial"
+          description="El motor determinístico sigue siendo la fuente de métricas e insights abajo. La IA complementa con lectura ejecutiva y preguntas puntuales sobre el mismo período."
         />
-        <BusinessAnalystPanel
+        <ExecutiveAnalysisPanel
           key={analystPanelKey}
+          businessContext={businessContextForAi}
+        />
+        <SpecificQuestionsPanel
+          key={`${analystPanelKey}-q`}
           businessContext={businessContextForAi}
         />
       </section>

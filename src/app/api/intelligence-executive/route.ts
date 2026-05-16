@@ -1,24 +1,19 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { OPENAI_INTELLIGENCE_MODEL } from "@/lib/intelligence/openai-model";
-import { ANALYST_CORE_RULES } from "@/lib/intelligence/openai-analyst-rules";
+import {
+  ANALYST_CORE_RULES,
+  EXECUTIVE_JSON_SHAPE_DESC,
+} from "@/lib/intelligence/openai-analyst-rules";
+import { parseExecutiveAnalysisJson } from "@/lib/intelligence/executive-analysis-types";
 
 export const runtime = "nodejs";
 
-const MAX_QUESTION_CHARS = 1_500;
 const MAX_CONTEXT_JSON_CHARS = 100_000;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
 }
-
-const QUESTION_SYSTEM_EXTRA = `Modo: respuesta a una pregunta puntual del titular.
-
-Formato:
-- Respondé en texto corrido o párrafos cortos; no fuerces plantillas tipo "1) Diagnóstico 2) Evidencia" salvo que la pregunta lo requiera.
-- Sé directo y analítico; no uses formato de chat informal ni saludos largos.
-- Citá magnitudes del contexto cuando fundamentes (montos, %, rankings).
-- Si la pregunta amerita lista breve, usala; si no, un único bloque bien redactado alcanza.`;
 
 export async function POST(req: Request) {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
@@ -46,32 +41,6 @@ export async function POST(req: Request) {
   if (!isRecord(body)) {
     return NextResponse.json(
       { error: "invalid_body", message: "Solicitud inválida." },
-      { status: 400 },
-    );
-  }
-
-  const questionRaw = body.question;
-  if (typeof questionRaw !== "string") {
-    return NextResponse.json(
-      { error: "invalid_question", message: "Falta question (texto)." },
-      { status: 400 },
-    );
-  }
-
-  const question = questionRaw.replace(/\u0000/g, "").trim();
-  if (!question) {
-    return NextResponse.json(
-      { error: "empty_question", message: "La pregunta está vacía." },
-      { status: 400 },
-    );
-  }
-
-  if (question.length > MAX_QUESTION_CHARS) {
-    return NextResponse.json(
-      {
-        error: "question_too_long",
-        message: `La pregunta supera ${MAX_QUESTION_CHARS} caracteres.`,
-      },
       { status: 400 },
     );
   }
@@ -106,22 +75,24 @@ export async function POST(req: Request) {
   try {
     const completion = await openai.chat.completions.create({
       model: OPENAI_INTELLIGENCE_MODEL,
-      temperature: 0.32,
-      max_tokens: 2_048,
+      temperature: 0.28,
+      max_tokens: 3_500,
+      response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
-          content: `${ANALYST_CORE_RULES}\n\n${QUESTION_SYSTEM_EXTRA}\n\nbusinessContext (JSON):\n${contextString}`,
+          content: `${ANALYST_CORE_RULES}\n\n${EXECUTIVE_JSON_SHAPE_DESC}\n\nbusinessContext (JSON):\n${contextString}`,
         },
         {
           role: "user",
-          content: question,
+          content:
+            "Generá el informe ejecutivo en el formato JSON acordado. Usá solo evidencia del businessContext.",
         },
       ],
     });
 
-    const text = completion.choices[0]?.message?.content?.trim();
-    if (!text) {
+    const raw = completion.choices[0]?.message?.content?.trim();
+    if (!raw) {
       return NextResponse.json(
         {
           error: "empty_completion",
@@ -131,8 +102,20 @@ export async function POST(req: Request) {
       );
     }
 
+    const parsed = parseExecutiveAnalysisJson(raw);
+    if (!parsed) {
+      return NextResponse.json(
+        {
+          error: "invalid_analysis_json",
+          message:
+            "La respuesta no pudo interpretarse como informe estructurado. Probá regenerar.",
+        },
+        { status: 502 },
+      );
+    }
+
     return NextResponse.json({
-      reply: text,
+      analysis: parsed,
       model: OPENAI_INTELLIGENCE_MODEL,
     });
   } catch {
@@ -140,7 +123,7 @@ export async function POST(req: Request) {
       {
         error: "openai_error",
         message:
-          "No se pudo obtener respuesta. Verificá API key, saldo y conectividad.",
+          "No se pudo generar el análisis. Verificá API key, saldo y conectividad.",
       },
       { status: 502 },
     );
