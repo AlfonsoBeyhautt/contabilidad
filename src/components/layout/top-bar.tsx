@@ -5,8 +5,6 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { useTheme } from "@/contexts/theme-context";
 import { PeriodFilter } from "@/components/period/period-filter";
-import { AUTH_DISABLED } from "@/lib/feature-flags";
-
 const titles: Record<string, string> = {
   "/inicio": "Inicio",
   "/ventas": "Ventas",
@@ -83,16 +81,14 @@ export function TopBar({ onMenuToggle }: { onMenuToggle?: () => void }) {
             <Moon className="h-4 w-4" aria-hidden />
           )}
         </button>
-        {!AUTH_DISABLED ? (
-          <button
-            type="button"
-            onClick={() => void logout()}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-          >
-            <LogOut className="h-3.5 w-3.5" aria-hidden />
-            Salir
-          </button>
-        ) : null}
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--foreground-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+        >
+          <LogOut className="h-3.5 w-3.5" aria-hidden />
+          Salir
+        </button>
       </div>
     </header>
   );

@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { Package } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { AuthBrandLink } from "@/components/auth/auth-brand-link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { AUTH_DISABLED } from "@/lib/feature-flags";
 import { APP_HOME } from "@/lib/public-routes";
 
 function safeNextPath(next: string | null): string {
@@ -33,10 +32,6 @@ function RegistroForm() {
   const nextPath = safeNextPath(searchParams.get("next"));
 
   useEffect(() => {
-    if (AUTH_DISABLED) {
-      router.replace(APP_HOME);
-      return;
-    }
     if (authReady && supabaseConfigured && isAuthenticated) {
       router.replace(nextPath);
     }
@@ -70,27 +65,9 @@ function RegistroForm() {
     }
   }
 
-  if (AUTH_DISABLED) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#05070d]">
-        <p className="text-sm text-slate-400">Redirigiendo…</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#05070d] via-[#0a0e18] to-[#05070d] px-4 py-12">
-      <Link
-        href="/"
-        className="mb-8 flex items-center gap-2 text-slate-400 transition hover:text-white"
-      >
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#3b82f6] to-[#6366f1] text-white">
-          <Package className="h-4 w-4" aria-hidden />
-        </span>
-        <span className="text-[14px] font-semibold text-white">
-          Contabilidad<span className="text-blue-400">D</span>
-        </span>
-      </Link>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] px-4 py-12">
+      <AuthBrandLink />
 
       <Card className="w-full max-w-md border-[var(--border)] shadow-xl">
         <CardHeader
@@ -198,8 +175,8 @@ export default function RegistroPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[#05070d]">
-          <p className="text-sm text-slate-400">Cargando…</p>
+        <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
+          <p className="text-sm text-[var(--foreground-muted)]">Cargando…</p>
         </div>
       }
     >

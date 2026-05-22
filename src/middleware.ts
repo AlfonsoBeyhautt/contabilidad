@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { AUTH_DISABLED } from "@/lib/feature-flags";
 import { APP_HOME, isPublicPath } from "@/lib/public-routes";
 import { getSupabaseMiddlewareResult } from "@/lib/supabase/supabase-middleware";
 
@@ -18,13 +17,6 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/") ||
     /\.(?:ico|png|jpg|jpeg|gif|svg|webp)$/.test(pathname)
   ) {
-    return NextResponse.next();
-  }
-
-  if (AUTH_DISABLED) {
-    if (pathname === "/login" || pathname === "/registro") {
-      return NextResponse.redirect(new URL(APP_HOME, request.url));
-    }
     return NextResponse.next();
   }
 
