@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { DataProvider } from "@/contexts/data-context";
 import { PeriodProvider } from "@/contexts/period-context";
 import { AUTH_DISABLED } from "@/lib/feature-flags";
+import { APP_HOME } from "@/lib/public-routes";
 
 export default function DashboardLayout({
   children,
@@ -20,7 +21,7 @@ export default function DashboardLayout({
   useEffect(() => {
     if (AUTH_DISABLED) return;
     if (authReady && supabaseConfigured && !isAuthenticated) {
-      router.replace("/login");
+      router.replace(`/login?next=${encodeURIComponent(APP_HOME)}`);
     }
   }, [authReady, supabaseConfigured, isAuthenticated, router]);
 

@@ -8,7 +8,7 @@ import { PeriodFilter } from "@/components/period/period-filter";
 import { AUTH_DISABLED } from "@/lib/feature-flags";
 
 const titles: Record<string, string> = {
-  "/": "Inicio",
+  "/inicio": "Inicio",
   "/ventas": "Ventas",
   "/productos": "Productos",
   "/stock": "Stock",
@@ -23,7 +23,7 @@ const titles: Record<string, string> = {
 };
 
 const subtitles: Record<string, string> = {
-  "/": "Resumen ejecutivo del negocio",
+  "/inicio": "Resumen ejecutivo del negocio",
   "/ventas": "Operaciones de venta y trazabilidad",
   "/productos": "Catálogo de familias, modelos y talles",
   "/stock": "Inventario disponible por variante",

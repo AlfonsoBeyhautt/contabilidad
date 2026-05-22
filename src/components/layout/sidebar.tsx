@@ -21,7 +21,7 @@ import {
 const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "General",
-    items: [{ href: "/", label: "Inicio", icon: LayoutDashboard }],
+    items: [{ href: "/inicio", label: "Inicio", icon: LayoutDashboard }],
   },
   {
     label: "Operación",
@@ -98,9 +98,7 @@ export function Sidebar({
             </p>
             {group.items.map(({ href, label, icon: Icon }) => {
               const active =
-                href === "/"
-                  ? pathname === "/"
-                  : pathname === href || pathname.startsWith(`${href}/`);
+                pathname === href || pathname.startsWith(`${href}/`);
               return (
                 <Link
                   key={href}

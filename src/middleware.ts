@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { AUTH_DISABLED } from "@/lib/feature-flags";
+import { APP_HOME, isPublicPath } from "@/lib/public-routes";
 import { getSupabaseMiddlewareResult } from "@/lib/supabase/supabase-middleware";
 
 function isSupabaseEnvReady(): boolean {
@@ -14,16 +15,15 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
+    pathname.startsWith("/api/") ||
     /\.(?:ico|png|jpg|jpeg|gif|svg|webp)$/.test(pathname)
   ) {
     return NextResponse.next();
   }
 
-  // Flag global: si el login está desactivado, mandamos /login a / y dejamos
-  // pasar todo lo demás sin chequeo de sesión.
   if (AUTH_DISABLED) {
-    if (pathname === "/login") {
-      return NextResponse.redirect(new URL("/", request.url));
+    if (pathname === "/login" || pathname === "/registro") {
+      return NextResponse.redirect(new URL(APP_HOME, request.url));
     }
     return NextResponse.next();
   }
@@ -34,16 +34,18 @@ export async function middleware(request: NextRequest) {
 
   const { response, user } = await getSupabaseMiddlewareResult(request);
   const isLogin = pathname === "/login";
+  const isRegistro = pathname === "/registro";
+  const isPublic = isPublicPath(pathname);
 
-  if (!user && !isLogin) {
+  if (!user && !isPublic) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     redirectUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && isLogin) {
-    return NextResponse.redirect(new URL("/", request.url));
+  if (user && (isLogin || isRegistro)) {
+    return NextResponse.redirect(new URL(APP_HOME, request.url));
   }
 
   return response;

@@ -16,12 +16,17 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export type SignInResult = { ok: true } | { ok: false; message: string };
 
+export type SignUpResult =
+  | { ok: true; needsEmailConfirmation: boolean }
+  | { ok: false; message: string };
+
 type AuthContextValue = {
   supabaseConfigured: boolean;
   user: User | null;
   isAuthenticated: boolean;
   authReady: boolean;
   signInWithEmail: (email: string, password: string) => Promise<SignInResult>;
+  signUpWithEmail: (email: string, password: string) => Promise<SignUpResult>;
   logout: () => Promise<void>;
 };
 
@@ -86,6 +91,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const signUpWithEmail = useCallback(
+    async (email: string, password: string): Promise<SignUpResult> => {
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) {
+        return {
+          ok: false,
+          message:
+            "Supabase no está configurado. Agregá las variables de entorno y reiniciá el servidor.",
+        };
+      }
+      const trimmed = email.trim();
+      if (!trimmed || !password) {
+        return { ok: false, message: "Completá email y contraseña." };
+      }
+      if (password.length < 6) {
+        return {
+          ok: false,
+          message: "La contraseña debe tener al menos 6 caracteres.",
+        };
+      }
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmed,
+        password,
+        options: origin
+          ? { emailRedirectTo: `${origin}/login` }
+          : undefined,
+      });
+      if (error) {
+        return { ok: false, message: error.message };
+      }
+      const needsEmailConfirmation = !data.session;
+      return { ok: true, needsEmailConfirmation };
+    },
+    [],
+  );
+
   const logout = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
     if (supabase) {
@@ -93,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(null);
     router.refresh();
-    router.push("/login");
+    router.push("/");
   }, [router]);
 
   const value = useMemo(
@@ -103,9 +146,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: Boolean(supabaseConfigured && user),
       authReady,
       signInWithEmail,
+      signUpWithEmail,
       logout,
     }),
-    [supabaseConfigured, user, authReady, signInWithEmail, logout],
+    [supabaseConfigured, user, authReady, signInWithEmail, signUpWithEmail, logout],
   );
 
   return (
